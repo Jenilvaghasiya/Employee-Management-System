@@ -6,7 +6,7 @@ const bcrypt = require("bcryptjs");
 const employeeController = {
   createEmployee: async (req, res) => {
     try {
-      const { name, email, password, department_id, designation_id, reporting_head_id, status } = req.body;
+      const { name, email, password, department_id, designation_id, reporting_head_id, role, status } = req.body;
 
       if (!name || !email || !password || !department_id || !designation_id) {
         return res.status(400).json({ status: false, message: "All required fields must be provided" });
@@ -14,7 +14,7 @@ const employeeController = {
 
       const existing = await Employee.findOne({ where: { email } });
       if (existing) {
-        return res.status(409).json({ status: false, message: "Employee with this email already exists" });
+        return res.status(409).json({ status: false, message: "Employee already exists" });
       }
 
       const hashPassword = await bcrypt.hash(password, 10);
@@ -25,13 +25,18 @@ const employeeController = {
         department_id,
         designation_id,
         reporting_head_id,
+        role: role || "employee",
         status,
       });
 
-      res.status(201).json({ status: true, message: "Employee created successfully", data: newEmp });
+      res.status(201).json({
+        status: true,
+        message: "Employee created successfully",
+        data: newEmp,
+      });
     } catch (err) {
       console.error("Error creating employee:", err);
-      res.status(500).json({ status: false, message: "Internal Server Error", error: err.message });
+      res.status(500).json({ status: false, message: err.message });
     }
   },
 
@@ -61,10 +66,7 @@ const employeeController = {
         ],
       });
 
-      if (!emp) {
-        return res.status(404).json({ status: false, message: "Employee not found" });
-      }
-
+      if (!emp) return res.status(404).json({ status: false, message: "Employee not found" });
       res.status(200).json({ status: true, message: "Employee fetched successfully", data: emp });
     } catch (err) {
       res.status(500).json({ status: false, message: err.message });
@@ -74,28 +76,14 @@ const employeeController = {
   updateEmployee: async (req, res) => {
     try {
       const { id } = req.params;
-      const { name, email, password, department_id, designation_id, reporting_head_id, status } = req.body;
+      const { name, email, password, department_id, designation_id, reporting_head_id, role, status } = req.body;
 
       const emp = await Employee.findByPk(id);
-      if (!emp) {
-        return res.status(404).json({ status: false, message: "Employee not found" });
-      }
+      if (!emp) return res.status(404).json({ status: false, message: "Employee not found" });
 
-      let hashPassword = emp.password;
-      if (password) {
-        hashPassword = await bcrypt.hash(password, 10);
-      }
+      const hashPassword = password ? await bcrypt.hash(password, 10) : emp.password;
 
-      await emp.update({
-        name,
-        email,
-        password: hashPassword,
-        department_id,
-        designation_id,
-        reporting_head_id,
-        status,
-      });
-
+      await emp.update({ name, email, password: hashPassword, department_id, designation_id, reporting_head_id, role, status });
       res.status(200).json({ status: true, message: "Employee updated successfully", data: emp });
     } catch (err) {
       res.status(500).json({ status: false, message: err.message });
@@ -106,9 +94,7 @@ const employeeController = {
     try {
       const { id } = req.params;
       const emp = await Employee.findByPk(id);
-      if (!emp) {
-        return res.status(404).json({ status: false, message: "Employee not found" });
-      }
+      if (!emp) return res.status(404).json({ status: false, message: "Employee not found" });
 
       await emp.destroy();
       res.status(200).json({ status: true, message: "Employee deleted successfully" });
