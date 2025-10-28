@@ -5,6 +5,7 @@ const {sequelize} = require('./config/db.js');
 const departmentRoutes = require('./routes/departmentRoutes');
 const designationRoutes = require("./routes/designationRoutes");
 const leaveTypeRoutes = require("./routes/leaveTypeRoutes");
+const employeeRoutes = require("./routes/employeeRoutes");
 
 dotenv.config();
 const app = express();
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use('/api/departments',departmentRoutes);
 app.use('/api/designations',designationRoutes);
 app.use('/api/leave-types',leaveTypeRoutes);
+app.use('/api/employees',employeeRoutes);
 
 sequelize.sync()
     .then(() => console.log('Database synchronized.'))
