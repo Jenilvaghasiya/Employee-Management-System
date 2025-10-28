@@ -3,7 +3,6 @@ const Designation = require("../model/designation");
 const LeaveType = require("../model/leaveType");
 
 const leavePolicyController = {
-  // ➕ Create Leave Policy
   createPolicy: async (req, res) => {
     try {
       const { designation_id, leave_type_id, year_limit, months_limit, status } = req.body;
@@ -12,7 +11,6 @@ const leavePolicyController = {
         return res.status(400).json({ status: false, message: "Designation ID and Leave Type ID are required" });
       }
 
-      // check duplicates
       const exists = await LeavePolicy.findOne({
         where: { designation_id, leave_type_id },
       });
@@ -40,7 +38,6 @@ const leavePolicyController = {
     }
   },
 
-  // 📜 Get All Policies
   getAllPolicies: async (req, res) => {
     try {
       const policies = await LeavePolicy.findAll({
@@ -55,7 +52,6 @@ const leavePolicyController = {
     }
   },
 
-  // 🔍 Get Policy by ID
   getPolicyById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -76,7 +72,6 @@ const leavePolicyController = {
     }
   },
 
-  // ✏️ Update Policy
   updatePolicy: async (req, res) => {
     try {
       const { id } = req.params;
@@ -95,7 +90,6 @@ const leavePolicyController = {
     }
   },
 
-  // ❌ Delete Policy
   deletePolicy: async (req, res) => {
     try {
       const { id } = req.params;

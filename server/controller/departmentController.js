@@ -9,7 +9,6 @@ const departmentController = {
         return res.status(400).json({ status: false, message: "Name required" });
       }
 
-      // Check if department already exists
       const existing = await Department.findOne({ where: { name } });
       if (existing) {
         return res

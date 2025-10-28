@@ -4,7 +4,6 @@ const Designation = require("../model/designation");
 const bcrypt = require("bcryptjs");
 
 const employeeController = {
-  // ➕ Create Employee
   createEmployee: async (req, res) => {
     try {
       const { name, email, password, department_id, designation_id, reporting_head_id, status } = req.body;
@@ -36,7 +35,6 @@ const employeeController = {
     }
   },
 
-  // 📜 Get all Employees with department & designation
   getAllEmployees: async (req, res) => {
     try {
       const employees = await Employee.findAll({
@@ -52,7 +50,6 @@ const employeeController = {
     }
   },
 
-  // 🔍 Get by ID
   getEmployeeById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -74,7 +71,6 @@ const employeeController = {
     }
   },
 
-  // ✏️ Update Employee
   updateEmployee: async (req, res) => {
     try {
       const { id } = req.params;
@@ -106,7 +102,6 @@ const employeeController = {
     }
   },
 
-  // ❌ Delete Employee
   deleteEmployee: async (req, res) => {
     try {
       const { id } = req.params;

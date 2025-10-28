@@ -48,7 +48,6 @@ const LeavePolicy = sequelize.define("LeavePolicy", {
   timestamps: true,
 });
 
-// Associations
 Designation.hasMany(LeavePolicy, {
   foreignKey: "designation_id",
   as: "leavePolicies",

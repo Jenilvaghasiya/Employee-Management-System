@@ -2,7 +2,6 @@ const Attendance = require("../model/attendance");
 const Employee = require("../model/employee");
 
 const attendanceController = {
-  // ➕ Create attendance
   createAttendance: async (req, res) => {
     try {
       const { employee_id, date, sign_in_time, sign_out_time, status } = req.body;
@@ -35,7 +34,6 @@ const attendanceController = {
     }
   },
 
-  // 📜 Get all attendance
   getAllAttendance: async (req, res) => {
     try {
       const records = await Attendance.findAll({
@@ -48,7 +46,6 @@ const attendanceController = {
     }
   },
 
-  // 🔍 Get attendance by ID
   getAttendanceById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -66,7 +63,6 @@ const attendanceController = {
     }
   },
 
-  // ✏️ Update attendance
   updateAttendance: async (req, res) => {
     try {
       const { id } = req.params;
@@ -85,7 +81,6 @@ const attendanceController = {
     }
   },
 
-  // ❌ Delete attendance
   deleteAttendance: async (req, res) => {
     try {
       const { id } = req.params;
