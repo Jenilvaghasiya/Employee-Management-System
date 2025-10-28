@@ -7,6 +7,7 @@ const designationRoutes = require("./routes/designationRoutes");
 const leaveTypeRoutes = require("./routes/leaveTypeRoutes");
 const employeeRoutes = require("./routes/employeeRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
+const leavePolicyRoutes = require("./routes/leavePolicyRoutes");
 
 dotenv.config();
 const app = express();
@@ -19,6 +20,7 @@ app.use('/api/designations',designationRoutes);
 app.use('/api/leave-types',leaveTypeRoutes);
 app.use('/api/employees',employeeRoutes);
 app.use('/api/attendance',attendanceRoutes);
+app.use('/api/leave-policies',leavePolicyRoutes);
 
 
 sequelize.sync()
