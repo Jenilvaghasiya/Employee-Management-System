@@ -83,7 +83,7 @@ const departmentController = {
       await department.update({ name, status });
       res
         .status(200)
-        .json({ status: ok, messege: "Department Updated Successfully" });
+        .json({ status: "ok", messege: "Department Updated Successfully" });
     } catch (err) {
       res.status(500).json({ status: false, messege: err });
     }

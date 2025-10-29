@@ -97,7 +97,7 @@ const authController = {
 
   // 🧑‍💼 Admin Only Middleware
   isAdmin: (req, res, next) => {
-    if (req.user.role !== "Admin") {
+    if (req.user.role !== "admin") {
       return res.status(403).json({ status: false, message: "Access denied: Admins only" });
     }
     next();
