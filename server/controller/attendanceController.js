@@ -2,12 +2,10 @@ const Attendance = require("../model/attendance");
 const Employee = require("../model/employee");
 
 const attendanceController = {
-  // ✅ Create Attendance
   createAttendance: async (req, res) => {
     try {
       const { employee_id, date, sign_in_time, sign_out_time, status } = req.body;
 
-      // Validation
       if (!employee_id || !date) {
         return res.status(400).json({
           status: false,
@@ -23,7 +21,6 @@ const attendanceController = {
         });
       }
 
-      // ✅ Convert to proper datetime
       const formattedSignIn = sign_in_time ? new Date(`${date}T${sign_in_time}`) : null;
       const formattedSignOut = sign_out_time ? new Date(`${date}T${sign_out_time}`) : null;
 
@@ -46,7 +43,6 @@ const attendanceController = {
     }
   },
 
-  // ✅ Get All Attendance
   getAllAttendance: async (req, res) => {
     try {
       const records = await Attendance.findAll({
@@ -66,7 +62,6 @@ const attendanceController = {
     }
   },
 
-  // ✅ Get Single Attendance by ID
   getAttendanceById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -93,7 +88,6 @@ const attendanceController = {
     }
   },
 
-  // ✅ Update Attendance
   updateAttendance: async (req, res) => {
     try {
       const { id } = req.params;
@@ -128,7 +122,6 @@ const attendanceController = {
     }
   },
 
-  // ✅ Delete Attendance
   deleteAttendance: async (req, res) => {
     try {
       const { id } = req.params;
