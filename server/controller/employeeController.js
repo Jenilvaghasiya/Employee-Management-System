@@ -40,6 +40,39 @@ const employeeController = {
     }
   },
 
+  // Employee self-service profile update (no role/status/department/designation changes)
+  updateSelf: async (req, res) => {
+    try {
+      const auth = req.user; // set by verifyToken
+      if (!auth?.id) return res.status(401).json({ status: false, message: "Unauthorized" });
+
+      const { name, email, password } = req.body;
+      const emp = await Employee.findByPk(auth.id);
+      if (!emp) return res.status(404).json({ status: false, message: "Employee not found" });
+
+      // Optional fields; do not let user change role/status/department/designation via this endpoint
+      const payload = {};
+      if (typeof name !== 'undefined') payload.name = name;
+      if (typeof email !== 'undefined') payload.email = email;
+      if (password) {
+        const hashPassword = await bcrypt.hash(password, 10);
+        payload.password = hashPassword;
+      }
+
+      await emp.update(payload);
+      const withRels = await Employee.findByPk(auth.id, {
+        include: [
+          { model: Department, as: "department", attributes: ["id", "name"] },
+          { model: Designation, as: "designation", attributes: ["id", "title"] },
+          { model: Employee, as: "reporting_head", attributes: ["id", "name", "email"] },
+        ],
+      });
+      res.status(200).json({ status: true, message: "Profile updated successfully", data: withRels });
+    } catch (err) {
+      res.status(500).json({ status: false, message: err.message });
+    }
+  },
+
   getAllEmployees: async (req, res) => {
     try {
       const employees = await Employee.findAll({

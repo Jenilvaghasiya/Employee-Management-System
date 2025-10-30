@@ -21,4 +21,8 @@ export const employeesService = {
     const res = await api.delete(`/employees/${id}`);
     return res.data;
   },
+  updateSelf: async (payload) => {
+    const res = await api.put('/employees/me', payload);
+    return res.data?.data;
+  },
 };
