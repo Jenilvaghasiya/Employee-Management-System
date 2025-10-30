@@ -10,6 +10,7 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
   const handleChange = (e) => {
     setFormData({
@@ -21,11 +22,19 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!emailRegex.test(formData.email.trim())) {
+      setError('Enter a valid email address');
+      return;
+    }
+    if (!formData.password) {
+      setError('Password is required');
+      return;
+    }
     setLoading(true);
-    setError('');
+    // do not clear error immediately to avoid flicker; overwrite after success
 
     try {
-      await login(formData);
+      await login({ email: formData.email.trim(), password: formData.password });
       // Redirect will be handled by App.jsx
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
