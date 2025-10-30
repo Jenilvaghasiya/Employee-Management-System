@@ -12,6 +12,7 @@ const DepartmentsManager = () => {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [query, setQuery] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
 
 const filtered = useMemo(() => {
   const q = query.trim().toLowerCase();
@@ -49,6 +50,7 @@ const filtered = useMemo(() => {
     setForm(initialForm);
     setEditingId(null);
     setSaving(false);
+    setModalOpen(false);
   };
 
   const handleSubmit = async (e) => {
@@ -77,7 +79,7 @@ const filtered = useMemo(() => {
   const handleEdit = (row) => {
     setEditingId(row.id);
     setForm({ name: row.name || '', status: row.status || 'Active' });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setModalOpen(true);
   };
 
   const handleDelete = async (row) => {
@@ -102,53 +104,57 @@ const filtered = useMemo(() => {
             onChange={(e) => setQuery(e.target.value)}
             className="dep-input"
           />
+          <button
+            className="btn primary"
+            onClick={() => { setEditingId(null); setForm(initialForm); setModalOpen(true); }}
+          >
+            Add Department
+          </button>
         </div>
       </div>
 
       {error && <div className="dep-alert error">{error}</div>}
 
-      <form className="dep-form" onSubmit={handleSubmit}>
-        <div className="dep-form-row">
-          <div className="dep-field">
-            <label>Name *</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
-              placeholder="e.g., Engineering"
-              className="dep-input"
-              required
-            />
-          </div>
-          <div className="dep-field">
-            <label>Status</label>
-            <select
-              value={form.status}
-              onChange={(e) => setForm((s) => ({ ...s, status: e.target.value }))}
-              className="dep-input"
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+      {modalOpen && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setModalOpen(false); }}>
+          <div className="modal">
+            <div className="modal-header">
+              <h3>{editingId ? 'Edit Department' : 'Add Department'}</h3>
+              <button className="modal-close" onClick={() => setModalOpen(false)}>×</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="dep-form-row">
+                <div className="dep-field">
+                  <label>Name *</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
+                    placeholder="e.g., Engineering"
+                    className="dep-input"
+                    required
+                  />
+                </div>
+                <div className="dep-field">
+                  <label>Status</label>
+                  <select
+                    value={form.status}
+                    onChange={(e) => setForm((s) => ({ ...s, status: e.target.value }))}
+                    className="dep-input"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+              <div className="dep-form-actions">
+                <button type="submit" className="btn primary" disabled={saving}>{saving ? 'Saving...' : (editingId ? 'Update' : 'Create')}</button>
+                <button type="button" className="btn ghost" onClick={resetForm} disabled={saving}>Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
-        <div className="dep-form-actions">
-          {editingId ? (
-            <>
-              <button type="submit" className="btn primary" disabled={saving}>
-                {saving ? 'Saving...' : 'Update'}
-              </button>
-              <button type="button" className="btn ghost" onClick={resetForm} disabled={saving}>
-                Cancel
-              </button>
-            </>
-          ) : (
-            <button type="submit" className="btn primary" disabled={saving}>
-              {saving ? 'Saving...' : 'Add Department'}
-            </button>
-          )}
-        </div>
-      </form>
+      )}
 
       <div className="dep-table-card">
         <div className="dep-table-head">
@@ -178,8 +184,8 @@ const filtered = useMemo(() => {
                     <td>{row.id}</td>
                     <td>{row.name}</td>
                     <td>
-                      <span className={`badge ${row.status === 'Active' ? 'success' : 'muted'}`}>
-                        {row.status || '—'}
+                      <span className={`badge ${(row.status===true || String(row.status)==='Active') ? 'success' : 'muted'}`}>
+                        {(row.status===true || String(row.status)==='Active') ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td>
@@ -202,8 +208,9 @@ const filtered = useMemo(() => {
 
       <style>{`
         .departments-wrap { display: grid; gap: 20px; }
-        .departments-toolbar { display:flex; align-items:center; justify-content:space-between; }
+        .departments-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px }
         .departments-toolbar h2 { font-size: 22px; color:#1f2937; font-weight:700; }
+        .departments-actions { display:flex; gap:10px; align-items:center }
         .dep-input { padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; background:#fff; }
         .dep-input:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15) }
         .dep-form { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.04) }
@@ -232,6 +239,12 @@ const filtered = useMemo(() => {
         .badge { padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700 }
         .badge.success { background:#ecfdf5; color:#065f46; border:1px solid #d1fae5 }
         .badge.muted { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb }
+        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; padding:20px; z-index:1000 }
+        .modal { background:#fff; border-radius:14px; width:100%; max-width:640px; box-shadow:0 20px 60px rgba(0,0,0,.2); border:1px solid #e5e7eb }
+        .modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #e5e7eb }
+        .modal-header h3 { margin:0; font-size:18px; color:#111827; font-weight:700 }
+        .modal-close { background:transparent; border:none; font-size:22px; line-height:1; cursor:pointer; padding:4px 8px }
+        .modal form { padding:16px 20px }
         @media (max-width: 640px){
           .dep-form-row { grid-template-columns: 1fr; }
         }
