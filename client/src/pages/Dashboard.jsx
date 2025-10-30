@@ -21,6 +21,7 @@ import { attendanceService } from "../services/attendanceService";
 const Dashboard = () => {
   const { user, logout, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  const [mobileOpen, setMobileOpen] = useState(false);
   // Overview live data
   const [empList, setEmpList] = useState([]);
   const [deptList, setDeptList] = useState([]);
@@ -36,6 +37,11 @@ const Dashboard = () => {
   const handleLogout = () => {
     logout();
     window.location.href = "/login";
+  };
+
+  const handleNavClick = (key) => {
+    setActiveTab(key);
+    if (window?.innerWidth <= 768) setMobileOpen(false);
   };
 
   useEffect(() => {
@@ -167,8 +173,14 @@ const Dashboard = () => {
   return (
     <div className="dashboard-layout">
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
+          <div className="sidebar-mobile-head">
+            <button className="hamburger close" onClick={() => setMobileOpen(false)}>
+              <X size={18} />
+            </button>
+            <div className="app-chip">EMS</div>
+          </div>
           <h2>EMS</h2>
         </div>
 
@@ -188,7 +200,7 @@ const Dashboard = () => {
                 <button
                   key={item.key}
                   className={`btn-tab ${activeTab === item.key ? "active" : ""}`}
-                  onClick={() => setActiveTab(item.key)}
+                  onClick={() => handleNavClick(item.key)}
                 >
                   <item.icon size={18} style={{ marginRight: 8 }} />
                   {item.label}
@@ -205,12 +217,12 @@ const Dashboard = () => {
                 { key: "profile", icon: Users, label: "My Profile" },
                 { key: "attendance", icon: CalendarCheck, label: "Attendance" },
                 { key: "apply-leave", icon: FilePlus, label: "Apply Leave" },
-                { key: "team-leave-requests", icon: ClipboardList, label: "Leave Requests" },
+                { key: "team-leave-requests", icon: ClipboardList, label: "Team Leave Requests" },
               ].map((item) => (
                 <button
                   key={item.key}
                   className={`btn-tab ${activeTab === item.key ? "active" : ""}`}
-                  onClick={() => setActiveTab(item.key)}
+                  onClick={() => handleNavClick(item.key)}
                 >
                   <item.icon size={18} style={{ marginRight: 8 }} />
                   {item.label}
@@ -224,9 +236,17 @@ const Dashboard = () => {
         </nav>
       </aside>
 
+      {/* Mobile overlay */}
+      {mobileOpen && <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />}
+
       {/* Main content */}
       <main className="dashboard-main">
         <header className="dashboard-header">
+          <div className="mobile-toggle">
+            <button className="hamburger" onClick={() => setMobileOpen((s) => !s)}>
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
           <h1>Employee Management System</h1>
         </header>
 
@@ -234,7 +254,7 @@ const Dashboard = () => {
           <section className="pro-overview">
             <div className="pro-top-hero">
               <div className="pro-hero-left">
-                <h2>Welcome back, {user?.name}! 👋</h2>
+                <h2>Welcome back, {user?.name}</h2>
                 <p>{isAdmin ? "Here's your team overview for today" : "Here's your summary for today"}</p>
               </div>
               {isAdmin ? (
