@@ -53,7 +53,7 @@ const isValidDate = (dateStr) => {
 };
 
 const ApplyLeave = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [items, setItems] = useState([]);
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [policies, setPolicies] = useState([]);
@@ -179,7 +179,9 @@ const ApplyLeave = () => {
         leaveTypesService.list(),
         leavePoliciesService.list(),
       ]);
-      setItems(Array.isArray(reqs) ? reqs : []);
+      const list = Array.isArray(reqs) ? reqs : [];
+      const filtered = isAdmin ? list : list.filter(r => String(r.employee_id) === String(user?.id));
+      setItems(filtered);
       setLeaveTypes(Array.isArray(types) ? types : []);
       setPolicies(Array.isArray(pols) ? pols : []);
     } catch (e) {
@@ -297,24 +299,38 @@ const ApplyLeave = () => {
   // Get minimum date (today) for date inputs
   const minDate = toYMD(getTodayDate());
 
+  const handleAdminDecision = async (row, decision) => {
+    try {
+      setSaving(true);
+      await leaveRequestsService.update(row.id, { leave_status: decision, approved_by: user?.id });
+      await fetchAll();
+    } catch (e) {
+      setError(e?.response?.data?.message || `Failed to ${decision.toLowerCase()}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <section className="apply-leave-wrap">
       <div className="designations-toolbar">
-        <h2>Apply Leave</h2>
-        <div className="designations-actions">
-          <button
-            className="btn primary"
-            onClick={() => {
-              setEditingId(null);
-              setForm(initialForm);
-              setError('');
-              setSuccess('');
-              setModalOpen(true);
-            }}
-          >
-            Apply Leave
-          </button>
-        </div>
+        <h2>{isAdmin ? 'Leave Requests' : 'Apply Leave'}</h2>
+        {!isAdmin && (
+          <div className="designations-actions">
+            <button
+              className="btn primary"
+              onClick={() => {
+                setEditingId(null);
+                setForm(initialForm);
+                setError('');
+                setSuccess('');
+                setModalOpen(true);
+              }}
+            >
+              Apply Leave
+            </button>
+          </div>
+        )}
       </div>
 
       {error && <div className="dep-alert error">{error}</div>}
@@ -433,7 +449,7 @@ const ApplyLeave = () => {
 
       <div className="dep-table-card">
         <div className="dep-table-head">
-          <span>My Requests: {items.length}</span>
+          <span>{isAdmin ? 'All Requests' : 'My Requests'}: {items.length}</span>
           <button className="btn refresh" onClick={fetchAll} disabled={loading}>
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
@@ -443,6 +459,7 @@ const ApplyLeave = () => {
             <thead>
               <tr>
                 <th style={{width:'60px'}}>ID</th>
+                {isAdmin && <th>Employee</th>}
                 <th>Leave Type</th>
                 <th>Start</th>
                 <th>End</th>
@@ -454,11 +471,14 @@ const ApplyLeave = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="center">Loading...</td></tr>
+                <tr><td colSpan={isAdmin ? 9 : 8} className="center">Loading...</td></tr>
               ) : items.length ? (
                 items.map((row) => (
                   <tr key={row.id}>
                     <td>{row.id}</td>
+                    {isAdmin && (
+                      <td>{row.employee?.name || `Emp #${row.employee_id}`}</td>
+                    )}
                     <td>{row.leaveType?.name || row.leave_type?.name || '-'}</td>
                     <td>{formatDateDMY(row.start_date)}</td>
                     <td>{formatDateDMY(row.end_date)}</td>
@@ -471,20 +491,28 @@ const ApplyLeave = () => {
                     </td>
                     <td>
                       <div className="row-actions">
-                        <button
-                          className="btn small"
-                          onClick={() => handleEdit(row)}
-                          disabled={row.leave_status !== 'Pending'}
-                          title={row.leave_status !== 'Pending' ? 'Only pending requests can be edited' : 'Edit request'}
-                        >
-                          Edit
-                        </button>
+                        {!isAdmin && (
+                          <button
+                            className="btn small"
+                            onClick={() => handleEdit(row)}
+                            disabled={row.leave_status !== 'Pending'}
+                            title={row.leave_status !== 'Pending' ? 'Only pending requests can be edited' : 'Edit request'}
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {isAdmin && row.leave_status === 'Pending' && (
+                          <>
+                            <button className="btn small" onClick={() => handleAdminDecision(row, 'Approved')} disabled={saving}>Approve</button>
+                            <button className="btn small ghost" onClick={() => handleAdminDecision(row, 'Rejected')} disabled={saving}>Reject</button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={8} className="center">No requests yet</td></tr>
+                <tr><td colSpan={isAdmin ? 9 : 8} className="center">No requests yet</td></tr>
               )}
             </tbody>
           </table>
