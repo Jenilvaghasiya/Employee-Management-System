@@ -191,7 +191,9 @@ const Dashboard = () => {
             </button>
             <div className="app-chip">EMS</div>
           </div>
-          <h2>EMS</h2>
+          <div className="sidebar-logo-top">
+            <img src="/EMS-icon.png" alt="EMS" />
+          </div>
         </div>
 
         <nav className="sidebar-nav">
@@ -216,6 +218,7 @@ const Dashboard = () => {
                   {item.label}
                 </button>
               ))}
+           
               <button onClick={handleLogout} className="logout-btn">
                 <LogOutIcon size={18} style={{marginRight:8}} /> Logout
               </button>
@@ -238,6 +241,7 @@ const Dashboard = () => {
                   {item.label}
                 </button>
               ))}
+     
               <button onClick={handleLogout} className="logout-btn">
                 <LogOutIcon size={18} style={{marginRight:8}} /> Logout
               </button>
