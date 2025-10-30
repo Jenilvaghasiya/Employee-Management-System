@@ -70,7 +70,7 @@ const DesignationsManager = () => {
       const payload = {
         title: form.title.trim(),
         department_id: Number(form.department_id),
-        status: form.status,
+        status: form.status === 'Active',
       };
       if (editingId) {
         await designationsService.update(editingId, payload);
@@ -91,7 +91,7 @@ const DesignationsManager = () => {
     setForm({
       title: row.title || '',
       department_id: row.department_id || '',
-      status: row.status || 'Active',
+      status: (row.status===true || String(row.status)==='Active') ? 'Active' : 'Inactive',
     });
     setModalOpen(true);
   };
