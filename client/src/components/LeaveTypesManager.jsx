@@ -13,6 +13,8 @@ const LeaveTypesManager = () => {
   const [editingId, setEditingId] = useState(null);
   const [query, setQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -20,6 +22,13 @@ const LeaveTypesManager = () => {
       !q || String(it.name || '').toLowerCase().includes(q) || String(it.status || '').toLowerCase().includes(q)
     );
   }, [items, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageSafe = Math.min(Math.max(1, page), totalPages);
+  const paginated = useMemo(() => {
+    const start = (pageSafe - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, pageSafe, pageSize]);
 
   const fetchAll = async () => {
     try {
@@ -143,7 +152,7 @@ const LeaveTypesManager = () => {
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
-        <div className="dep-table-wrap">
+        <div className="dep-table-wrap" style={{maxHeight: 420, overflowY: 'auto'}}>
           <table className="dep-table">
             <thead>
               <tr>
@@ -160,7 +169,7 @@ const LeaveTypesManager = () => {
                   <td colSpan={5} className="center">Loading...</td>
                 </tr>
               ) : filtered.length ? (
-                filtered.map((row) => (
+                paginated.map((row) => (
                   <tr key={row.id}>
                     <td>{row.id}</td>
                     <td>{row.name}</td>
@@ -187,6 +196,21 @@ const LeaveTypesManager = () => {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="pagination" style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px'}}>
+          <div className="pagination-left" style={{display:'flex',alignItems:'center',gap:8,color:'#4b5563'}}>
+            <select className="dep-input" value={pageSize} onChange={(e)=>{ setPageSize(Number(e.target.value)||10); setPage(1); }}>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+            </select>
+            <span>per page</span>
+          </div>
+          <div className="pagination-right" style={{display:'flex',alignItems:'center',gap:10}}>
+            <button className="btn small" disabled={pageSafe===1} onClick={()=>setPage(p=>Math.max(1,p-1))}>Prev</button>
+            <span className="page-indicator" style={{color:'#4b5563',fontWeight:600}}>Page {pageSafe} of {totalPages}</span>
+            <button className="btn small" disabled={pageSafe===totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))}>Next</button>
+          </div>
         </div>
       </div>
 

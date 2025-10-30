@@ -31,6 +31,8 @@ const AdminAttendance = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [empMap, setEmpMap] = useState({}); // id -> employee detail
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const load = async (m, y) => {
     try {
@@ -99,6 +101,13 @@ const AdminAttendance = () => {
     return list;
   }, [rows, month, year, empMap]);
 
+  const totalPages = Math.max(1, Math.ceil(grouped.length / pageSize));
+  const pageSafe = Math.min(Math.max(1, page), totalPages);
+  const paginated = useMemo(() => {
+    const start = (pageSafe - 1) * pageSize;
+    return grouped.slice(start, start + pageSize);
+  }, [grouped, pageSafe, pageSize]);
+
   const onMonthChange = (e) => {
     const value = e.target.value; // format YYYY-MM
     if (!value) return;
@@ -134,7 +143,7 @@ const AdminAttendance = () => {
           <span>Month: {monthInputValue}</span>
           <span style={{ marginLeft: "auto" }}>Employees: {grouped.length}</span>
         </div>
-        <div className="dep-table-wrap">
+        <div className="dep-table-wrap" style={{maxHeight: 420, overflowY: 'auto'}}>
           <table className="dep-table">
             <thead>
               <tr>
@@ -155,7 +164,7 @@ const AdminAttendance = () => {
                   <td colSpan={9} className="center">Loading...</td>
                 </tr>
               ) : grouped.length ? (
-                grouped.map((g) => (
+                paginated.map((g) => (
                   <tr key={g.employee.id}>
                     <td>{g.employee.id}</td>
                     <td>{g.employee.name}</td>
@@ -179,6 +188,21 @@ const AdminAttendance = () => {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="pagination" style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px'}}>
+          <div className="pagination-left" style={{display:'flex',alignItems:'center',gap:8,color:'#4b5563'}}>
+            <select className="dep-input" value={pageSize} onChange={(e)=>{ setPageSize(Number(e.target.value)||10); setPage(1); }}>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+            </select>
+            <span>per page</span>
+          </div>
+          <div className="pagination-right" style={{display:'flex',alignItems:'center',gap:10}}>
+            <button className="btn small" disabled={pageSafe===1} onClick={()=>setPage(p=>Math.max(1,p-1))}>Prev</button>
+            <span className="page-indicator" style={{color:'#4b5563',fontWeight:600}}>Page {pageSafe} of {totalPages}</span>
+            <button className="btn small" disabled={pageSafe===totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))}>Next</button>
+          </div>
         </div>
       </div>
     </section>

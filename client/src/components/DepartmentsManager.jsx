@@ -13,6 +13,8 @@ const DepartmentsManager = () => {
   const [editingId, setEditingId] = useState(null);
   const [query, setQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
 const filtered = useMemo(() => {
   const q = query.trim().toLowerCase();
@@ -27,6 +29,13 @@ const filtered = useMemo(() => {
       .includes(q)
   );
 }, [items, query]);
+
+const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+const pageSafe = Math.min(Math.max(1, page), totalPages);
+const paginated = useMemo(() => {
+  const start = (pageSafe - 1) * pageSize;
+  return filtered.slice(start, start + pageSize);
+}, [filtered, pageSafe, pageSize]);
 
 
   const fetchAll = async () => {
@@ -180,7 +189,7 @@ const filtered = useMemo(() => {
                   <td colSpan={4} className="center">Loading...</td>
                 </tr>
               ) : filtered.length ? (
-                filtered.map((row) => (
+                paginated.map((row) => (
                   <tr key={row.id}>
                     <td>{row.id}</td>
                     <td>{row.name}</td>
@@ -205,6 +214,21 @@ const filtered = useMemo(() => {
             </tbody>
           </table>
         </div>
+        <div className="pagination">
+          <div className="pagination-left">
+            <select className="dep-input" value={pageSize} onChange={(e)=>{ setPageSize(Number(e.target.value)||10); setPage(1); }}>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+            </select>
+            <span>per page</span>
+          </div>
+          <div className="pagination-right">
+            <button className="btn small" disabled={pageSafe===1} onClick={()=>setPage(p=>Math.max(1,p-1))}>Prev</button>
+            <span className="page-indicator">Page {pageSafe} of {totalPages}</span>
+            <button className="btn small" disabled={pageSafe===totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))}>Next</button>
+          </div>
+        </div>
       </div>
 
       <style>{`
@@ -226,19 +250,6 @@ const filtered = useMemo(() => {
         .btn.ghost:hover { background:#e5e7eb }
         .btn.refresh { background:#f3f4f6; }
         .btn.refresh:hover { background:#e5e7eb }
-        .btn.small { padding:8px 10px; }
-        .btn.danger { background:#ef4444; color:#fff }
-        .btn.danger:hover { background:#dc2626 }
-        .dep-table-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.04) }
-        .dep-table-head { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #e5e7eb; color:#4b5563 }
-        .dep-table-wrap { width:100%; overflow-x:auto; }
-        .dep-table { width:100%; border-collapse:collapse; }
-        .dep-table th, .dep-table td { padding:12px 16px; border-bottom:1px solid #f1f5f9; text-align:left; }
-        .dep-table th { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#6b7280; background:#fafbfc }
-        .center { text-align:center; color:#6b7280 }
-        .row-actions { display:flex; gap:8px }
-        .badge { padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700 }
-        .badge.success { background:#ecfdf5; color:#065f46; border:1px solid #d1fae5 }
         .badge.muted { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb }
         .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; padding:20px; z-index:1000 }
         .modal { background:#fff; border-radius:14px; width:100%; max-width:640px; box-shadow:0 20px 60px rgba(0,0,0,.2); border:1px solid #e5e7eb }
