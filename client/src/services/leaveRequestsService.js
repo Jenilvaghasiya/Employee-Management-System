@@ -5,6 +5,10 @@ export const leaveRequestsService = {
     const res = await api.get('/leave-requests');
     return res.data?.data || [];
   },
+  teamList: async () => {
+    const res = await api.get('/leave-requests/team');
+    return res.data?.data || [];
+  },
   get: async (id) => {
     const res = await api.get(`/leave-requests/${id}`);
     return res.data?.data;

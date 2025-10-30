@@ -251,7 +251,7 @@ const LeavePoliciesManager = () => {
         .designations-actions { display:flex; gap:10px; align-items:center }
         .dep-input { padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; background:#fff }
         .dep-input:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15) }
-        .lp-form-grid { display:grid; grid-template-columns: 1.2fr 1.2fr 140px 140px 140px; gap:16px }
+        .lp-form-grid { display:grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap:16px; align-items:start }
         .dep-field { display:flex; flex-direction:column; gap:8px }
         .btn { padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600; font-size:14px }
         .btn.primary { background:#2563eb; color:#fff }
@@ -275,13 +275,13 @@ const LeavePoliciesManager = () => {
         .badge.success { background:#ecfdf5; color:#065f46; border:1px solid #d1fae5 }
         .badge.muted { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb }
         .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; padding:20px; z-index:1000 }
-        .modal { background:#fff; border-radius:14px; width:100%; max-width:920px; box-shadow:0 20px 60px rgba(0,0,0,.2); border:1px solid #e5e7eb }
+        .modal { background:#fff; border-radius:14px; width:100%; max-width:980px; box-shadow:0 20px 60px rgba(0,0,0,.2); border:1px solid #e5e7eb }
         .modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #e5e7eb }
         .modal-header h3 { margin:0; font-size:18px; color:#111827; font-weight:700 }
         .modal-close { background:transparent; border:none; font-size:22px; line-height:1; cursor:pointer; padding:4px 8px }
         .modal form { padding:16px 20px }
-        @media (max-width: 980px){ .lp-form-grid { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 640px){ .lp-form-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1100px){ .lp-form-grid { grid-template-columns: repeat(2, minmax(220px,1fr)); } }
+        @media (max-width: 700px){ .lp-form-grid { grid-template-columns: 1fr; } }
       `}</style>
     </section>
   );

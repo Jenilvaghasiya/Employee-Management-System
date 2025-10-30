@@ -49,7 +49,7 @@ const LeaveTypesManager = () => {
     try {
       setSaving(true);
       setError('');
-      const payload = { name: form.name.trim(), is_paid: !!form.is_paid, status: form.status };
+      const payload = { name: form.name.trim(), is_paid: !!form.is_paid, status: form.status === 'Active' };
       if (editingId) {
         await leaveTypesService.update(editingId, payload);
       } else {
@@ -66,7 +66,7 @@ const LeaveTypesManager = () => {
 
   const handleEdit = (row) => {
     setEditingId(row.id);
-    setForm({ name: row.name || '', is_paid: !!row.is_paid, status: row.status || 'Active' });
+    setForm({ name: row.name || '', is_paid: !!row.is_paid, status: (row.status===true || String(row.status)==='Active') ? 'Active' : 'Inactive' });
     setModalOpen(true);
   };
 

@@ -56,6 +56,31 @@ const leaveRequestController = {
     }
   },
 
+  // Fetch leave requests for employees whose reporting head is the logged-in user
+  getTeamRequests: async (req, res) => {
+    try {
+      const auth = req.user;
+      if (!auth?.id) return res.status(401).json({ status: false, message: "Unauthorized" });
+
+      const requests = await LeaveRequest.findAll({
+        include: [
+          {
+            model: Employee,
+            as: "employee",
+            attributes: ["id", "name", "email", "reporting_head_id"],
+            where: { reporting_head_id: auth.id },
+          },
+          { model: LeaveType, as: "leaveType", attributes: ["id", "name", "is_paid"] },
+          { model: Employee, as: "approver", attributes: ["id", "name"] },
+        ],
+      });
+
+      res.status(200).json({ status: true, message: "Team leave requests fetched", data: requests });
+    } catch (err) {
+      res.status(500).json({ status: false, message: err.message });
+    }
+  },
+
   getById: async (req, res) => {
     try {
       const { id } = req.params;
