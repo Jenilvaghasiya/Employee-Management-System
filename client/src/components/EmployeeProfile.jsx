@@ -14,6 +14,7 @@ const EmployeeProfile = () => {
   const [success, setSuccess] = useState('');
   const [meta, setMeta] = useState({ department: null, designation: null, status: '' });
   const [today, setToday] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const load = async () => {
     try {
@@ -37,8 +38,16 @@ const EmployeeProfile = () => {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const nameRegex = /^[A-Za-z .]{2,}$/; // letters, space, dot
+
   const onSubmit = async (e) => {
     e?.preventDefault?.();
+    const errs = {};
+    if (!nameRegex.test(form.name.trim())) errs.name = 'Enter a valid name (alphabets, space and dot)';
+    if (!emailRegex.test(form.email.trim())) errs.email = 'Enter a valid email address';
+    setFieldErrors(errs);
+    if (Object.keys(errs).length) return;
     try {
       setSaving(true);
       setError('');
@@ -85,11 +94,13 @@ const EmployeeProfile = () => {
           <form onSubmit={onSubmit} className="emp-form">
             <div className="dep-field">
               <label>Name</label>
-              <input className="dep-input" type="text" value={form.name} onChange={e=>setForm(s=>({...s, name: e.target.value}))} required />
+              <input className="dep-input" type="text" value={form.name} onChange={e=>{ setForm(s=>({...s, name: e.target.value})); setFieldErrors(f=>({...f, name: undefined})); }} required />
+              {fieldErrors.name && <small className="field-error">{fieldErrors.name}</small>}
             </div>
             <div className="dep-field">
               <label>Email</label>
-              <input className="dep-input" type="email" value={form.email} onChange={e=>setForm(s=>({...s, email: e.target.value}))} required />
+              <input className="dep-input" type="email" value={form.email} onChange={e=>{ setForm(s=>({...s, email: e.target.value})); setFieldErrors(f=>({...f, email: undefined})); }} required />
+              {fieldErrors.email && <small className="field-error">{fieldErrors.email}</small>}
             </div>
             <div className="dep-field">
               <label>New Password (optional)</label>
@@ -119,6 +130,7 @@ const EmployeeProfile = () => {
         .emp-tags { display:flex; gap:8px; flex-wrap:wrap }
         .emp-form { display:grid; gap:12px }
         .emp-form-actions { display:flex; justify-content:flex-end }
+        .field-error { color:#b91c1c; font-size:12px }
       `}</style>
     </section>
   );

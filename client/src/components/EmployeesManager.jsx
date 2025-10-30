@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { employeesService } from '../services/employeesService';
 import { departmentsService } from '../services/departmentsService';
 import { designationsService } from '../services/designationsService';
@@ -30,6 +30,7 @@ const EmployeesManager = () => {
   const [deptFilter, setDeptFilter] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const prevDeptRef = useRef('');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -79,9 +80,14 @@ const EmployeesManager = () => {
   }, []);
 
   useEffect(() => {
-    fetchDesignationsFor(form.department_id);
-    // reset selected designation if department changes
-    setForm((s) => ({ ...s, designation_id: '' }));
+    // Always fetch designations for the current department
+    Promise.resolve(fetchDesignationsFor(form.department_id)).finally(() => {
+      // Only clear designation if the department actually changed (user action)
+      if (prevDeptRef.current !== '' && prevDeptRef.current !== form.department_id) {
+        setForm((s) => ({ ...s, designation_id: '' }));
+      }
+      prevDeptRef.current = form.department_id || '';
+    });
   }, [form.department_id]);
 
   const resetForm = () => {
@@ -134,7 +140,7 @@ const EmployeesManager = () => {
         designation_id: Number(form.designation_id),
         reporting_head_id: form.reporting_head_id ? Number(form.reporting_head_id) : null,
         role: form.role,
-        status: form.status,
+        status: form.status === 'Active',
       };
       if (form.password) payload.password = form.password;
 
@@ -152,7 +158,7 @@ const EmployeesManager = () => {
     }
   };
 
-  const handleEdit = (row) => {
+  const handleEdit = async (row) => {
     setEditingId(row.id);
     setForm({
       name: row.name || '',
@@ -162,8 +168,11 @@ const EmployeesManager = () => {
       designation_id: row.designation_id || '',
       reporting_head_id: row.reporting_head_id || '',
       role: row.role?.toLowerCase?.() || 'employee',
-      status: row.status || 'Active',
+      status: (row.status===true || String(row.status)==='Active') ? 'Active' : 'Inactive',
     });
+    // Prefetch designations for the employee's department so dropdown is populated
+    await fetchDesignationsFor(row.department_id);
+    prevDeptRef.current = row.department_id || '';
     setModalOpen(true);
   };
 

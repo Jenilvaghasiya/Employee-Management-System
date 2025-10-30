@@ -8,6 +8,7 @@ import LeaveTypesManager from "../components/LeaveTypesManager";
 import LeavePoliciesManager from "../components/LeavePoliciesManager";
 import ApplyLeave from "../components/ApplyLeave";
 import LeaveRequestsAdmin from "../components/LeaveRequestsAdmin";
+import TeamLeaveRequests from "../components/TeamLeaveRequests";
 import EmployeeAttendance from "../components/EmployeeAttendance";
 import AdminAttendance from "../components/AdminAttendance";
 import EmployeeProfile from "../components/EmployeeProfile";
@@ -204,6 +205,7 @@ const Dashboard = () => {
                 { key: "profile", icon: Users, label: "My Profile" },
                 { key: "attendance", icon: CalendarCheck, label: "Attendance" },
                 { key: "apply-leave", icon: FilePlus, label: "Apply Leave" },
+                { key: "team-leave-requests", icon: ClipboardList, label: "Leave Requests" },
               ].map((item) => (
                 <button
                   key={item.key}
@@ -457,13 +459,19 @@ const Dashboard = () => {
           </section>
         )}
 
+        {!isAdmin && activeTab === "team-leave-requests" && (
+          <section className="dashboard-section">
+            <TeamLeaveRequests />
+          </section>
+        )}
+
         {!isAdmin && activeTab === "profile" && (
           <section className="dashboard-section">
             <EmployeeProfile />
           </section>
         )}
 
-        {activeTab !== "overview" && activeTab !== "departments" && activeTab !== "designations" && activeTab !== "employees" && activeTab !== "leave-types" && activeTab !== "policies" && activeTab !== "leaves" && activeTab !== "leave-requests" && activeTab !== "apply-leave" && activeTab !== "attendance" && activeTab !== "profile" && (
+        {activeTab !== "overview" && activeTab !== "departments" && activeTab !== "designations" && activeTab !== "employees" && activeTab !== "leave-types" && activeTab !== "policies" && activeTab !== "leaves" && activeTab !== "leave-requests" && activeTab !== "apply-leave" && activeTab !== "attendance" && activeTab !== "profile" && activeTab !== "team-leave-requests" && (
           <section className="dashboard-section">
             <h2 className="section-title">
               {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
