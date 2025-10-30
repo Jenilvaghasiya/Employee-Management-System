@@ -26,7 +26,8 @@ const EmployeeProfile = () => {
       ]);
       if (emp) {
         setForm({ name: emp.name || '', email: emp.email || '', password: '' });
-        setMeta({ department: emp.department, designation: emp.designation, status: emp.status });
+        const statusLabel = (emp.status === true || String(emp.status) === 'Active') ? 'Active' : 'Inactive';
+        setMeta({ department: emp.department, designation: emp.designation, status: statusLabel });
       }
       setToday(td);
     } catch (e) {
@@ -58,7 +59,8 @@ const EmployeeProfile = () => {
       if (updated?.id) {
         setSuccess('Profile updated');
         setForm((s) => ({ ...s, password: '' }));
-        setMeta({ department: updated.department, designation: updated.designation, status: updated.status });
+        const statusLabel = (updated.status === true || String(updated.status) === 'Active') ? 'Active' : 'Inactive';
+        setMeta({ department: updated.department, designation: updated.designation, status: statusLabel });
       }
     } catch (e) {
       setError(e?.response?.data?.message || 'Update failed');
