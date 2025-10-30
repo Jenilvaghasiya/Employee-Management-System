@@ -62,10 +62,11 @@ const filtered = useMemo(() => {
     try {
       setSaving(true);
       setError('');
+      const payload = { name: form.name.trim(), status: form.status === 'Active' };
       if (editingId) {
-        await departmentsService.update(editingId, { name: form.name.trim(), status: form.status });
+        await departmentsService.update(editingId, payload);
       } else {
-        await departmentsService.create({ name: form.name.trim(), status: form.status });
+        await departmentsService.create(payload);
       }
       await fetchAll();
       resetForm();
@@ -78,7 +79,7 @@ const filtered = useMemo(() => {
 
   const handleEdit = (row) => {
     setEditingId(row.id);
-    setForm({ name: row.name || '', status: row.status || 'Active' });
+    setForm({ name: row.name || '', status: (row.status===true || String(row.status)==='Active') ? 'Active' : 'Inactive' });
     setModalOpen(true);
   };
 
