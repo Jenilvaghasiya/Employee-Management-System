@@ -21,6 +21,9 @@ const Register = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const nameRegex = /^[A-Za-z .]{2,}$/; // alphabets, space, dot
+  const pwdRegex = /^(?=.*\d)(?=.*[^A-Za-z0-9]).{7,}$/; // >6, number, special
 
   useEffect(() => {
     fetchDepartments();
@@ -67,8 +70,7 @@ const Register = () => {
       ...formData,
       [name]: value,
     });
-    setError('');
-    setSuccess('');
+    // Don't immediately clear error/success to avoid flicker
   };
 
   const handleSubmit = async (e) => {
@@ -77,14 +79,26 @@ const Register = () => {
     setError('');
     setSuccess('');
 
+    // Basic validations
+    if (!nameRegex.test(formData.name.trim())) {
+      setError('Enter a valid full name (alphabets, space and dot)');
+      setLoading(false);
+      return;
+    }
+    if (!emailRegex.test(formData.email.trim())) {
+      setError('Enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (!pwdRegex.test(formData.password)) {
+      setError('Password must be 7+ chars with a number and a special character');
       setLoading(false);
       return;
     }
@@ -187,64 +201,66 @@ const Register = () => {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="role">Role</label>
-            <select id="role" name="role" value={formData.role} onChange={handleChange}>
-              <option value="employee">Employee</option>
-              <option value="admin">Admin</option>
-            </select>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="role">Role</label>
+              <select id="role" name="role" value={formData.role} onChange={handleChange}>
+                <option value="employee">Employee</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="department_id">Department</label>
+              <select
+                id="department_id"
+                name="department_id"
+                value={formData.department_id}
+                onChange={handleChange}
+              >
+                <option value="">Select Department</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="department_id">Department</label>
-            <select
-              id="department_id"
-              name="department_id"
-              value={formData.department_id}
-              onChange={handleChange}
-            >
-              <option value="">Select Department</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="designation_id">Designation</label>
-            <select
-              id="designation_id"
-              name="designation_id"
-              value={formData.designation_id}
-              onChange={handleChange}
-              disabled={!formData.department_id}
-            >
-              <option value="">Select Designation</option>
-              {designations.map((desig) => (
-                <option key={desig.id} value={desig.id}>
-                  {desig.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="reporting_head_id">Reporting Head</label>
-            <select
-              id="reporting_head_id"
-              name="reporting_head_id"
-              value={formData.reporting_head_id}
-              onChange={handleChange}
-            >
-              <option value="">Select Reporting Head</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name} ({emp.email})
-                </option>
-              ))}
-            </select>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="designation_id">Designation</label>
+              <select
+                id="designation_id"
+                name="designation_id"
+                value={formData.designation_id}
+                onChange={handleChange}
+                disabled={!formData.department_id}
+              >
+                <option value="">Select Designation</option>
+                {designations.map((desig) => (
+                  <option key={desig.id} value={desig.id}>
+                    {desig.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="reporting_head_id">Reporting Head</label>
+              <select
+                id="reporting_head_id"
+                name="reporting_head_id"
+                value={formData.reporting_head_id}
+                onChange={handleChange}
+              >
+                <option value="">Select Reporting Head</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name} ({emp.email})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <button type="submit" className="auth-button register-button" disabled={loading}>
