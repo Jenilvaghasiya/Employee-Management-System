@@ -29,6 +29,7 @@ const EmployeesManager = () => {
   const [query, setQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -88,20 +89,39 @@ const EmployeesManager = () => {
     setEditingId(null);
     setSaving(false);
     setModalOpen(false);
+    setFieldErrors({});
+  };
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const nameRegex = /^[A-Za-z .]{2,}$/; // letters, space, dot
+  const pwdRegex = /^(?=.*\d)(?=.*[^A-Za-z0-9]).{7,}$/; // >6 chars, number and special
+
+  const computeErrors = (draft, isEdit) => {
+    const errs = {};
+    if (!draft.name?.trim() || !nameRegex.test(draft.name.trim())) {
+      errs.name = 'Enter a valid name (alphabets, space and dot)';
+    }
+    if (!draft.email?.trim() || !emailRegex.test(draft.email.trim())) {
+      errs.email = 'Enter a valid email address';
+    }
+    if (!isEdit || draft.password) {
+      if (!draft.password) {
+        errs.password = 'Password is required';
+      } else if (!pwdRegex.test(draft.password)) {
+        errs.password = 'Password must be 7+ chars with a number and a special character';
+      }
+    }
+    if (!draft.department_id) errs.department_id = 'Department is required';
+    if (!draft.designation_id) errs.designation_id = 'Designation is required';
+    return errs;
   };
 
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
-    if (!form.name?.trim() || !form.email?.trim()) {
-      setError('Name and Email are required');
-      return;
-    }
-    if (!editingId && !form.password) {
-      setError('Password is required for new employee');
-      return;
-    }
-    if (!form.department_id || !form.designation_id) {
-      setError('Department and Designation are required');
+    const errs = computeErrors(form, !!editingId);
+    setFieldErrors(errs);
+    if (Object.keys(errs).length) {
+      setError('Please fix the highlighted fields');
       return;
     }
     try {
@@ -204,29 +224,34 @@ const EmployeesManager = () => {
               <div className="emp-form-grid">
                 <div className="dep-field">
                   <label>Name *</label>
-                  <input type="text" value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} className="dep-input" required />
+                  <input type="text" value={form.name} onChange={(e) => { setForm((s) => ({ ...s, name: e.target.value })); setFieldErrors((fe)=>({...fe, name: undefined})); }} className="dep-input" required />
+                  {fieldErrors.name && <small className="field-error">{fieldErrors.name}</small>}
                 </div>
                 <div className="dep-field">
                   <label>Email *</label>
-                  <input type="email" value={form.email} onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))} className="dep-input" required />
+                  <input type="email" value={form.email} onChange={(e) => { setForm((s) => ({ ...s, email: e.target.value })); setFieldErrors((fe)=>({...fe, email: undefined})); }} className="dep-input" required />
+                  {fieldErrors.email && <small className="field-error">{fieldErrors.email}</small>}
                 </div>
                 <div className="dep-field">
                   <label>{editingId ? 'Password (optional)' : 'Password *'}</label>
-                  <input type="password" value={form.password} onChange={(e) => setForm((s) => ({ ...s, password: e.target.value }))} className="dep-input" required={!editingId} />
+                  <input type="password" value={form.password} onChange={(e) => { setForm((s) => ({ ...s, password: e.target.value })); setFieldErrors((fe)=>({...fe, password: undefined})); }} className="dep-input" required={!editingId} />
+                  {fieldErrors.password && <small className="field-error">{fieldErrors.password}</small>}
                 </div>
                 <div className="dep-field">
                   <label>Department *</label>
-                  <select value={form.department_id} onChange={(e) => setForm((s) => ({ ...s, department_id: e.target.value }))} className="dep-input" required>
+                  <select value={form.department_id} onChange={(e) => { setForm((s) => ({ ...s, department_id: e.target.value })); setFieldErrors((fe)=>({...fe, department_id: undefined})); }} className="dep-input" required>
                     <option value="">Select Department</option>
                     {departments.map((d) => (<option key={d.id} value={d.id}>{d.name}</option>))}
                   </select>
+                  {fieldErrors.department_id && <small className="field-error">{fieldErrors.department_id}</small>}
                 </div>
                 <div className="dep-field">
                   <label>Designation *</label>
-                  <select value={form.designation_id} onChange={(e) => setForm((s) => ({ ...s, designation_id: e.target.value }))} className="dep-input" required disabled={!form.department_id}>
+                  <select value={form.designation_id} onChange={(e) => { setForm((s) => ({ ...s, designation_id: e.target.value })); setFieldErrors((fe)=>({...fe, designation_id: undefined})); }} className="dep-input" required disabled={!form.department_id}>
                     <option value="">Select Designation</option>
                     {designations.map((t) => (<option key={t.id} value={t.id}>{t.title}</option>))}
                   </select>
+                  {fieldErrors.designation_id && <small className="field-error">{fieldErrors.designation_id}</small>}
                 </div>
                 <div className="dep-field">
                   <label>Reporting Head</label>
@@ -327,9 +352,10 @@ const EmployeesManager = () => {
         .designations-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px }
         .designations-toolbar h2 { font-size:22px; color:#1f2937; font-weight:700 }
         .designations-actions { display:flex; gap:10px; align-items:center }
-        .emp-form-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px }
+        .emp-form-grid { display:grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap:16px; align-items:start }
         .dep-field { display:flex; flex-direction:column; gap:8px }
         .dep-field label { font-size:12px; font-weight:600; color:#374151 }
+        .field-error { color:#b91c1c; font-size:12px }
         .dep-form-actions { display:flex; gap:10px; margin-top:4px }
         .btn { padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600; font-size:14px }
         .btn.primary { background:#2563eb; color:#fff }
@@ -353,13 +379,13 @@ const EmployeesManager = () => {
         .badge.success { background:#ecfdf5; color:#065f46; border:1px solid #d1fae5 }
         .badge.muted { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb }
         .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; padding:20px; z-index:1000 }
-        .modal { background:#fff; border-radius:14px; width:100%; max-width:900px; box-shadow:0 20px 60px rgba(0,0,0,.2); border:1px solid #e5e7eb }
+        .modal { background:#fff; border-radius:14px; width:100%; max-width:980px; box-shadow:0 20px 60px rgba(0,0,0,.2); border:1px solid #e5e7eb }
         .modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #e5e7eb }
         .modal-header h3 { margin:0; font-size:18px; color:#111827; font-weight:700 }
         .modal-close { background:transparent; border:none; font-size:22px; line-height:1; cursor:pointer; padding:4px 8px }
         .modal form { padding:16px 20px }
         .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px }
-        @media (max-width: 1100px){ .emp-form-grid { grid-template-columns: repeat(2,1fr) } }
+        @media (max-width: 1100px){ .emp-form-grid { grid-template-columns: repeat(2, minmax(220px,1fr)) } }
         @media (max-width: 700px){ .emp-form-grid { grid-template-columns: 1fr } }
       `}</style>
     </section>
