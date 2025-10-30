@@ -217,7 +217,7 @@ const Dashboard = () => {
                 { key: "profile", icon: Users, label: "My Profile" },
                 { key: "attendance", icon: CalendarCheck, label: "Attendance" },
                 { key: "apply-leave", icon: FilePlus, label: "Apply Leave" },
-                { key: "team-leave-requests", icon: ClipboardList, label: "Team Leave Requests" },
+                { key: "team-leave-requests", icon: ClipboardList, label: "Leave Requests" },
               ].map((item) => (
                 <button
                   key={item.key}
@@ -247,7 +247,7 @@ const Dashboard = () => {
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
-          <h1>Employee Management System</h1>
+          {/* <h1>Employee Management System</h1> */}
         </header>
 
         {activeTab === "overview" && (
