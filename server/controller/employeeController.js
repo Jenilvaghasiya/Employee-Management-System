@@ -40,6 +40,19 @@ const employeeController = {
     }
   },
 
+  // Public minimal list for registration page to populate Reporting Head
+  listPublicHeads: async (req, res) => {
+    try {
+      const employees = await Employee.findAll({
+        where: { status: true },
+        attributes: ["id", "name", "email", "role"],
+      });
+      res.status(200).json({ status: true, message: "Fetched successfully", data: employees });
+    } catch (err) {
+      res.status(500).json({ status: false, message: err.message });
+    }
+  },
+
   // Employee self-service profile update (no role/status/department/designation changes)
   updateSelf: async (req, res) => {
     try {

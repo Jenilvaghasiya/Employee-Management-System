@@ -123,6 +123,16 @@ const Dashboard = () => {
     return { totalEmployees, presentToday, onLeave, pendingRequests };
   }, [empList, leaveReqs, attMonth, attPrevMonth]);
 
+  const formatDateDMY = (iso) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d)) return String(iso).slice(0,10);
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = d.getFullYear();
+    return `${dd}-${mm}-${yy}`;
+  };
+
   const recentRequests = useMemo(() => {
     const list = Array.isArray(leaveReqs) ? [...leaveReqs] : [];
     list.sort((a,b) => (b.id || 0) - (a.id || 0));
@@ -130,7 +140,7 @@ const Dashboard = () => {
       id: r.id,
       name: r.employee?.name || `Emp #${r.employee_id}`,
       type: r.leaveType?.name || 'Leave',
-      date: `${r.start_date} - ${r.end_date}`,
+      date: `${formatDateDMY(r.start_date)} - ${formatDateDMY(r.end_date)}`,
       status: String(r.leave_status || '').toLowerCase() || 'pending',
       avatar: (r.employee?.name || 'NA').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
     }));
@@ -299,7 +309,7 @@ const Dashboard = () => {
               <div className="pro-card">
                 <div className="pro-card-head"><h3>Today's Attendance</h3></div>
                 <div className="pro-list">
-                  <div className="pro-mini"><span className="pro-li-title">Date</span><span className="pro-li-sub">{myToday?.date || '—'}</span></div>
+                  <div className="pro-mini"><span className="pro-li-title">Date</span><span className="pro-li-sub">{formatDateDMY(myToday?.date)}</span></div>
                   <div className="pro-mini"><span className="pro-li-title">Sign In</span><span className="pro-li-sub">{myToday?.sign_in_time || '—'}</span></div>
                   <div className="pro-mini"><span className="pro-li-title">Sign Out</span><span className="pro-li-sub">{myToday?.sign_out_time || '—'}</span></div>
                 </div>

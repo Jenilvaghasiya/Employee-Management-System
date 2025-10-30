@@ -10,6 +10,7 @@ const EmployeeAttendance = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [onLeaveToday, setOnLeaveToday] = useState(false);
 
   const fetchAll = async () => {
     try {
@@ -96,7 +97,11 @@ const EmployeeAttendance = () => {
         }
       }
     } catch (e) {
-      setError(e?.response?.data?.message || "Failed to sign in");
+      const msg = e?.response?.data?.message || "Failed to sign in";
+      setError(msg);
+      if (typeof msg === "string" && msg.toLowerCase().includes("leave")) {
+        setOnLeaveToday(true);
+      }
     } finally {
       setSaving(false);
     }
@@ -205,7 +210,7 @@ const EmployeeAttendance = () => {
             <button
               className="btn primary"
               onClick={signIn}
-              disabled={saving || loading}
+              disabled={saving || loading || onLeaveToday}
             >
               {saving ? "Signing in..." : "Sign In"}
             </button>
@@ -229,6 +234,9 @@ const EmployeeAttendance = () => {
       </div>
 
       {error && <div className="dep-alert error">{error}</div>}
+      {onLeaveToday && (
+        <div className="dep-alert warning">You are on approved leave today. Attendance sign-in is disabled.</div>
+      )}
       {success && <div className="dep-alert success">{success}</div>}
 
       <div className="dep-table-card">

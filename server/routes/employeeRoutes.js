@@ -3,6 +3,9 @@ const router = express.Router();
 const employeeController = require("../controller/employeeController");
 const { verifyToken, isAdmin } = require("../controller/authController");
 
+// Public route for registration to fetch reporting heads
+router.get("/public", employeeController.listPublicHeads);
+
 // Employee self profile (place BEFORE parameterized ':id' routes)
 router.put("/me", verifyToken, employeeController.updateSelf);
 

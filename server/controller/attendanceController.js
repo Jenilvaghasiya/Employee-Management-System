@@ -2,6 +2,7 @@ const Attendance = require("../model/attendance");
 const Employee = require("../model/employee");
 const Department = require("../model/department");
 const Designation = require("../model/designation");
+const LeaveRequest = require("../model/leaveRequest");
 const { Op } = require("sequelize");
 
 const attendanceController = {
@@ -58,24 +59,53 @@ const attendanceController = {
       const todayStr = `${yyyy}-${mm}-${dd}`;
 
       console.log('[ATTENDANCE] sign-in attempt', { userId, todayStr });
+      // Block sign-in if user has an approved full-day leave today
+      const leave = await LeaveRequest.findOne({
+        where: {
+          employee_id: userId,
+          leave_status: 'Approved',
+          status: true,
+          start_date: { [Op.lte]: todayStr },
+          end_date: { [Op.gte]: todayStr },
+        },
+      });
+      if (leave && !leave.is_half_day) {
+        return res.status(400).json({ status: false, message: 'You are on approved leave today. Attendance sign-in is disabled.' });
+      }
       let record = await Attendance.findOne({ where: { employee_id: userId, date: todayStr } });
       if (!record) {
-        record = await Attendance.create({
+        // If signing in after 18:00, also set sign_out_time to 18:00
+        const workEnd = new Date(`${todayStr}T18:00:00`);
+        const createPayload = {
           employee_id: userId,
           date: todayStr,
           sign_in_time: now,
           status: true,
-        });
+        };
+        if (!isNaN(workEnd) && now >= workEnd) {
+          createPayload.sign_out_time = workEnd;
+        }
+        record = await Attendance.create(createPayload);
         const fresh = await Attendance.findByPk(record.id);
         return res.status(201).json({ status: true, message: 'Signed in', data: fresh });
       }
 
       if (record.sign_in_time) {
+        // If already signed in and past 18:00 without sign-out, auto sign-off
+        const workEnd = new Date(`${todayStr}T18:00:00`);
+        if (!record.sign_out_time && !isNaN(workEnd) && now >= workEnd) {
+          await record.update({ sign_out_time: workEnd });
+        }
         const fresh = await Attendance.findByPk(record.id);
         return res.status(200).json({ status: true, message: 'Already signed in', data: fresh });
       }
 
       await record.update({ sign_in_time: now, status: true });
+      // If signing in after 18:00, also set sign_out_time to 18:00
+      const workEnd = new Date(`${todayStr}T18:00:00`);
+      if (!record.sign_out_time && !isNaN(workEnd) && now >= workEnd) {
+        await record.update({ sign_out_time: workEnd });
+      }
       const fresh = await Attendance.findByPk(record.id);
       return res.status(200).json({ status: true, message: 'Signed in', data: fresh });
     } catch (err) {
@@ -104,7 +134,10 @@ const attendanceController = {
         return res.status(200).json({ status: true, message: 'Already signed out', data: fresh });
       }
 
-      await record.update({ sign_out_time: now });
+      // Cap sign-out time to 18:00 local for fixed schedule
+      const workEnd = new Date(`${todayStr}T18:00:00`);
+      const signOutAt = (!isNaN(workEnd) && now >= workEnd) ? workEnd : now;
+      await record.update({ sign_out_time: signOutAt });
       const fresh = await Attendance.findByPk(record.id);
       return res.status(200).json({ status: true, message: 'Signed out', data: fresh });
     } catch (err) {
@@ -263,7 +296,13 @@ const attendanceController = {
       const dd = String(today.getDate()).padStart(2, '0');
       const todayStr = `${yyyy}-${mm}-${dd}`;
 
-      const record = await Attendance.findOne({ where: { employee_id: userId, date: todayStr } });
+      let record = await Attendance.findOne({ where: { employee_id: userId, date: todayStr } });
+      // If signed in but not signed out and it's past 18:00, auto sign-off now
+      const workEnd = new Date(`${todayStr}T18:00:00`);
+      if (record && record.sign_in_time && !record.sign_out_time && !isNaN(workEnd) && today >= workEnd) {
+        await record.update({ sign_out_time: workEnd });
+        record = await Attendance.findByPk(record.id);
+      }
       res.status(200).json({ status: true, message: 'Today fetched', data: record });
     } catch (err) {
       res.status(500).json({ status: false, message: err.message });
