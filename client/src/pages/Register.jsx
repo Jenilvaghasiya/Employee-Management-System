@@ -18,6 +18,8 @@ const Register = () => {
   const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [employeesError, setEmployeesError] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,10 +59,19 @@ const Register = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await api.get('/employees');
-      setEmployees(response.data.data || []);
+      setEmployeesLoading(true);
+      setEmployeesError('');
+      const response = await api.get('/employees/public');
+      const list = Array.isArray(response.data?.data) ? response.data.data : [];
+      // sort by name asc
+      list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+      setEmployees(list);
     } catch (err) {
       setEmployees([]);
+      setEmployeesError('Failed to load reporting heads');
+    }
+    finally {
+      setEmployeesLoading(false);
     }
   };
 
@@ -252,14 +263,18 @@ const Register = () => {
                 name="reporting_head_id"
                 value={formData.reporting_head_id}
                 onChange={handleChange}
+                disabled={employeesLoading}
               >
-                <option value="">Select Reporting Head</option>
+                <option value="" disabled={employeesLoading}>
+                  {employeesLoading ? 'Loading...' : 'Select Reporting Head'}
+                </option>
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.name} ({emp.email})
+                    {emp.name}
                   </option>
                 ))}
               </select>
+              {employeesError && <small className="error-message" style={{marginTop: 6}}>{employeesError}</small>}
             </div>
           </div>
 
