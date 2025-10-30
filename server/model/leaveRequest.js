@@ -41,6 +41,10 @@ const LeaveRequest = sequelize.define("LeaveRequest", {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  half_day_session: {
+    type: DataTypes.ENUM("Morning", "Evening"),
+    allowNull: true,
+  },
   leave_status: {
     type: DataTypes.ENUM("Pending", "Approved", "Rejected"),
     defaultValue: "Pending",

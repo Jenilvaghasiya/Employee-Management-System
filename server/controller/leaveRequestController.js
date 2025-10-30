@@ -5,20 +5,30 @@ const LeaveType = require("../model/leaveType");
 const leaveRequestController = {
   createRequest: async (req, res) => {
     try {
-      const { employee_id, leave_type_id, start_date, end_date, is_half_day, status } = req.body;
+      const { employee_id, leave_type_id, start_date, end_date, is_half_day, half_day_session, status } = req.body;
 
       if (!employee_id || !leave_type_id || !start_date || !end_date) {
         return res.status(400).json({ status: false, message: "Required fields missing" });
       }
 
-      const leaveRequest = await LeaveRequest.create({
+      const hasSessionColumn = !!(LeaveRequest?.rawAttributes && LeaveRequest.rawAttributes.half_day_session);
+      if (is_half_day && hasSessionColumn && !half_day_session) {
+        return res.status(400).json({ status: false, message: "half_day_session is required for half-day leave (Morning/Evening)" });
+      }
+
+      const createPayload = {
         employee_id,
         leave_type_id,
         start_date,
         end_date,
         is_half_day,
         status,
-      });
+      };
+      if (hasSessionColumn && is_half_day && half_day_session) {
+        createPayload.half_day_session = half_day_session;
+      }
+
+      const leaveRequest = await LeaveRequest.create(createPayload);
 
       res.status(201).json({
         status: true,
@@ -70,21 +80,36 @@ const leaveRequestController = {
   updateRequest: async (req, res) => {
     try {
       const { id } = req.params;
-      const { leave_status, approved_by, start_date, end_date, is_half_day, status } = req.body;
+      const { leave_status, approved_by, start_date, end_date, is_half_day, status, leave_type_id, half_day_session } = req.body;
 
       const request = await LeaveRequest.findByPk(id);
       if (!request) {
         return res.status(404).json({ status: false, message: "Leave request not found" });
       }
 
-      await request.update({
+      const hasSessionColumn = !!(LeaveRequest?.rawAttributes && LeaveRequest.rawAttributes.half_day_session);
+
+      const updatePayload = {
         leave_status,
         approved_by,
         start_date,
         end_date,
         is_half_day,
         status,
-      });
+      };
+      if (typeof leave_type_id !== 'undefined') {
+        updatePayload.leave_type_id = leave_type_id;
+      }
+      if (hasSessionColumn) {
+        if (is_half_day && !half_day_session) {
+          return res.status(400).json({ status: false, message: "half_day_session is required for half-day leave (Morning/Evening)" });
+        }
+        if (typeof half_day_session !== 'undefined') {
+          updatePayload.half_day_session = half_day_session || null;
+        }
+      }
+
+      await request.update(updatePayload);
 
       res.status(200).json({ status: true, message: "Leave request updated successfully", data: request });
     } catch (err) {
