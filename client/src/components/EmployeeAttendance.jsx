@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { attendanceService } from "../services/attendanceService";
 import { useAuth } from "../context/AuthContext";
+import { Clock } from "lucide-react";
 
 const EmployeeAttendance = () => {
   const { user } = useAuth();
@@ -11,6 +12,8 @@ const EmployeeAttendance = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [onLeaveToday, setOnLeaveToday] = useState(false);
+  const autoSignOutTimerRef = useRef(null);
+  const checkIntervalRef = useRef(null);
 
   const fetchAll = async () => {
     try {
@@ -60,6 +63,112 @@ const EmployeeAttendance = () => {
     }
   }, [success]);
 
+  // Calculate milliseconds until 6 PM today
+  const getMillisecondsUntil6PM = () => {
+    const now = new Date();
+    const target = new Date();
+    target.setHours(18, 0, 0, 0); // Set to 6 PM (18:00:00)
+
+    // If it's already past 6 PM today, return null (don't set timer)
+    if (now >= target) {
+      return null;
+    }
+
+    return target - now;
+  };
+
+  // Perform automatic sign-out
+  const performAutoSignOut = async () => {
+    console.log("⏰ 6 PM reached - Auto signing out...");
+    try {
+      const res = await attendanceService.signOut();
+      const rec = res?.id ? res : null;
+
+      if (rec) {
+        setToday(rec);
+        setItems((prev) => {
+          const arr = Array.isArray(prev) ? [...prev] : [];
+          const idx = arr.findIndex((r) => r.id === rec.id);
+          if (idx >= 0) {
+            arr[idx] = rec;
+          } else {
+            arr.unshift(rec);
+          }
+          return arr;
+        });
+        setSuccess("Automatically signed out at 6 PM");
+      } else {
+        const refreshed = await refreshTodayWithRetry();
+        const list = await attendanceService.listMine();
+        setItems(Array.isArray(list) ? list : []);
+
+        if (refreshed?.sign_out_time) {
+          setSuccess("Automatically signed out at 6 PM");
+        }
+      }
+    } catch (e) {
+      console.error("Auto sign-out failed:", e);
+      setError("Auto sign-out failed. Please sign out manually.");
+    }
+  };
+
+  // Auto sign-out timer - triggers at 6 PM if user is signed in
+  useEffect(() => {
+    // Clear any existing timers
+    if (autoSignOutTimerRef.current) {
+      clearTimeout(autoSignOutTimerRef.current);
+      autoSignOutTimerRef.current = null;
+    }
+    if (checkIntervalRef.current) {
+      clearInterval(checkIntervalRef.current);
+      checkIntervalRef.current = null;
+    }
+
+    // If user is signed in but not signed out, set the timer for 6 PM
+    if (today?.sign_in_time && !today?.sign_out_time) {
+      const msUntil6PM = getMillisecondsUntil6PM();
+
+      if (msUntil6PM !== null && msUntil6PM > 0) {
+        const hours = Math.floor(msUntil6PM / 3600000);
+        const minutes = Math.floor((msUntil6PM % 3600000) / 60000);
+        console.log(`⏰ Auto sign-out scheduled for 6 PM (in ${hours}h ${minutes}m)`);
+
+        // Set timer for 6 PM
+        autoSignOutTimerRef.current = setTimeout(performAutoSignOut, msUntil6PM);
+
+        // Also set an interval to check every minute (as a backup)
+        checkIntervalRef.current = setInterval(() => {
+          const now = new Date();
+          const hours = now.getHours();
+          const minutes = now.getMinutes();
+
+          // If it's 6 PM or later and user is still signed in
+          if (hours >= 18 && today?.sign_in_time && !today?.sign_out_time) {
+            performAutoSignOut();
+            if (checkIntervalRef.current) {
+              clearInterval(checkIntervalRef.current);
+              checkIntervalRef.current = null;
+            }
+          }
+        }, 60000); // Check every minute
+      } else if (msUntil6PM === null) {
+        console.log("⏰ Already past 6 PM today - no auto sign-out scheduled");
+      }
+    }
+
+    // Cleanup timers on unmount or when dependencies change
+    return () => {
+      if (autoSignOutTimerRef.current) {
+        clearTimeout(autoSignOutTimerRef.current);
+        autoSignOutTimerRef.current = null;
+      }
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current);
+        checkIntervalRef.current = null;
+      }
+    };
+  }, [today?.sign_in_time, today?.sign_out_time]);
+
   const signIn = async () => {
     try {
       setSaving(true);
@@ -83,7 +192,7 @@ const EmployeeAttendance = () => {
           }
           return arr;
         });
-        setSuccess("Signed in successfully");
+        setSuccess("Signed in successfully - Auto sign-out at 6 PM");
       } else {
         // Fallback: refresh from server
         const refreshed = await refreshTodayWithRetry();
@@ -91,7 +200,7 @@ const EmployeeAttendance = () => {
         setItems(Array.isArray(list) ? list : []);
 
         if (refreshed?.sign_in_time) {
-          setSuccess("Signed in successfully");
+          setSuccess("Signed in successfully - Auto sign-out at 6 PM");
         } else {
           setError("Sign in may have failed. Please refresh.");
         }
@@ -238,6 +347,13 @@ const EmployeeAttendance = () => {
         <div className="dep-alert warning">You are on approved leave today. Attendance sign-in is disabled.</div>
       )}
       {success && <div className="dep-alert success">{success}</div>}
+      
+      {todayState.signedIn && !todayState.signedOut && (
+        <div className="dep-alert info">
+          <Clock size={16} style={{ marginRight: 8, verticalAlign: "middle" }} />
+          <span>You will be automatically signed out at 6:00 PM if not done manually</span>
+        </div>
+      )}
 
       <div className="dep-table-card">
         <div className="dep-table-head">
