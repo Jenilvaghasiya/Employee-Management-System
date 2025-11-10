@@ -25,7 +25,12 @@ app.use('/api/attendance',attendanceRoutes);
 app.use('/api/leave-policies',leavePolicyRoutes);
 app.use('/api/leave-requests',leaveRequestRoutes);
 app.use('/api/auth',authRoutes);
-
+app.use('/', (req,res) => {
+    res.json(({
+        status : true,
+        msg : "Server running"
+    }))
+})
 
 sequelize.sync()
     .then(() => console.log('Database synchronized.'))
