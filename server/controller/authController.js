@@ -71,6 +71,7 @@ const authController = {
           name: user.name,
           email: user.email,
           role: user.role,
+          face_descriptor: user.face_descriptor,
         },
       });
     } catch (err) {

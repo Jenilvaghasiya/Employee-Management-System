@@ -1,15 +1,19 @@
 import api from './api';
 
 export const attendanceService = {
-  signIn: async () => {
-    const res = await api.post('/attendance/sign-in');
+  signIn: async (payload = {}) => {
+    const res = await api.post('/attendance/sign-in', payload);
     return res.data?.data || null;  // Return null instead of res.data
   },
-  signOut: async () => {
-    const res = await api.post('/attendance/sign-out');
+  signOut: async (payload = {}) => {
+    const res = await api.post('/attendance/sign-out', payload);
     return res.data?.data || null;  // Return null instead of res.data
   },
   // Fix others too
+  enrollFace: async (descriptor) => {
+    const res = await api.post('/employees/my/enroll-face', { descriptor });
+    return res.data?.data || null;
+  },
   listMine: async () => {
     const res = await api.get('/attendance/my');
     return res.data?.data || [];

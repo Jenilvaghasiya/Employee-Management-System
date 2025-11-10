@@ -10,7 +10,6 @@ router.post("/mark", verifyToken, attendanceController.markToday);
 router.post("/sign-in", verifyToken, attendanceController.signInToday);
 router.post("/sign-out", verifyToken, attendanceController.signOutToday);
 
-// Admin endpoints
 router.post("/", verifyToken, attendanceController.createAttendance);
 router.get("/", verifyToken, isAdmin, attendanceController.getAllAttendance);
 router.get("/:id", verifyToken, attendanceController.getAttendanceById);

@@ -52,6 +52,13 @@ const attendanceController = {
       const userId = req.user?.id;
       if (!userId) return res.status(401).json({ status: false, message: 'Unauthorized' });
 
+      // Ensure the user has enrolled their face before allowing sign-in
+      const emp = await Employee.findByPk(userId);
+      if (!emp) return res.status(404).json({ status: false, message: 'Employee not found' });
+      if (!emp.face_descriptor) {
+        return res.status(400).json({ status: false, message: 'Face not enrolled. Please enroll your face before signing in.' });
+      }
+
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, '0');
