@@ -32,11 +32,21 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Allow client code to refresh user info from server responses (e.g., after face enroll)
+  const setUserFromServer = (u) => {
+    if (!u) return;
+    setUser(u);
+    try {
+      localStorage.setItem('user', JSON.stringify(u));
+    } catch (_) {}
+  };
+
   const value = {
     user,
     login,
     register,
     logout,
+    setUserFromServer,
     loading,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
