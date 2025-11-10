@@ -1,10 +1,22 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { attendanceService } from "../services/attendanceService";
 import { useAuth } from "../context/AuthContext";
-import { Clock } from "lucide-react";
+import { Clock, Camera, UserCheck } from "lucide-react";
+import * as faceapi from "face-api.js";
+
+const loadFaceModels = async () => {
+  const MODEL_URL = "/models";
+  await Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+  ]);
+};
 
 const EmployeeAttendance = () => {
-  const { user } = useAuth();
+  const { user, setUserFromServer } = useAuth();
   const [today, setToday] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,7 +27,13 @@ const EmployeeAttendance = () => {
   const autoSignOutTimerRef = useRef(null);
   const checkIntervalRef = useRef(null);
 
-  const fetchAll = async () => {
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const webcamRef = useRef(null);
+  const [faceError, setFaceError] = useState("");
+
+  const fetchAll = useCallback(async () => {
+    if (!modelsLoaded) return;
     try {
       setLoading(true);
       setError("");
@@ -31,7 +49,7 @@ const EmployeeAttendance = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [modelsLoaded]);
 
   const refreshTodayWithRetry = async () => {
     try {
@@ -52,8 +70,14 @@ const EmployeeAttendance = () => {
   };
 
   useEffect(() => {
-    fetchAll();
+    loadFaceModels()
+      .then(() => setModelsLoaded(true))
+      .catch(() => setError("Failed to load AI models. Please refresh."));
   }, []);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   // Auto-clear success message after 3 seconds
   useEffect(() => {
@@ -169,17 +193,103 @@ const EmployeeAttendance = () => {
     };
   }, [today?.sign_in_time, today?.sign_out_time]);
 
-  const signIn = async () => {
+  const getCurrentLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        return reject(new Error("Geolocation is not supported by your browser."));
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        () => {
+          resolve(null);
+        }
+      );
+    });
+  };
+
+  const getFaceDescriptor = async () => {
+    if (!webcamRef.current) throw new Error("Webcam not ready");
+    const video = webcamRef.current;
+    const detection = await faceapi
+      .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!detection) {
+      setFaceError("No face detected. Please look at the camera.");
+      return null;
+    }
+    setFaceError("");
+    return detection.descriptor;
+  };
+
+  const handleEnrollFace = async () => {
+    setFaceError("");
+    if (!webcamRef.current) {
+      setError("Webcam not started. Click 'Sign In' first.");
+      return;
+    }
     try {
       setSaving(true);
-      setError("");
-      setSuccess("");
+      const descriptor = await getFaceDescriptor();
+      if (!descriptor) {
+        setSaving(false);
+        return;
+      }
+      const descriptorArray = Array.from(descriptor);
+      const updated = await attendanceService.enrollFace(descriptorArray);
+      if (updated) {
+        setUserFromServer(updated);
+      }
+      setSuccess("Face enrolled successfully! You can now sign in.");
+      setIsScanning(false);
+    } catch (e) {
+      setFaceError(e?.response?.data?.message || "Failed to enroll face");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-      const res = await attendanceService.signIn();
-
-      // Validate the response has the correct structure
+  const signIn = async () => {
+    if (!modelsLoaded) {
+      setError("AI models are still loading. Please wait.");
+      return;
+    }
+    if (!user?.face_descriptor) {
+      setFaceError("You must enroll your face before signing in.");
+      setIsScanning(true);
+      return;
+    }
+    setIsScanning(true);
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    setFaceError("");
+    try {
+      const location = await getCurrentLocation();
+      const currentDescriptor = await getFaceDescriptor();
+      if (!currentDescriptor) {
+        setSaving(false);
+        return;
+      }
+      const storedDescriptor = new Float32Array(
+        typeof user.face_descriptor === "string"
+          ? JSON.parse(user.face_descriptor)
+          : user.face_descriptor
+      );
+      const distance = faceapi.euclideanDistance(currentDescriptor, storedDescriptor);
+      const FACE_MATCH_THRESHOLD = 0.4;
+      if (distance > FACE_MATCH_THRESHOLD) {
+        setFaceError(`Face not recognized (Distance: ${distance.toFixed(2)}). Please try again.`);
+        setSaving(false);
+        return;
+      }
+      const res = await attendanceService.signIn(location);
       const rec = res?.id ? res : null;
-
       if (rec) {
         setToday(rec);
         setItems((prev) => {
@@ -194,17 +304,16 @@ const EmployeeAttendance = () => {
         });
         setSuccess("Signed in successfully - Auto sign-out at 6 PM");
       } else {
-        // Fallback: refresh from server
         const refreshed = await refreshTodayWithRetry();
         const list = await attendanceService.listMine();
         setItems(Array.isArray(list) ? list : []);
-
         if (refreshed?.sign_in_time) {
           setSuccess("Signed in successfully - Auto sign-out at 6 PM");
         } else {
           setError("Sign in may have failed. Please refresh.");
         }
       }
+      setIsScanning(false);
     } catch (e) {
       const msg = e?.response?.data?.message || "Failed to sign in";
       setError(msg);
@@ -215,6 +324,36 @@ const EmployeeAttendance = () => {
       setSaving(false);
     }
   };
+
+  const startWebcam = () => {
+    navigator.mediaDevices
+      .getUserMedia({ video: true, audio: false })
+      .then((stream) => {
+        if (webcamRef.current) {
+          webcamRef.current.srcObject = stream;
+        }
+      })
+      .catch(() => {
+        setError("Could not start webcam. Please grant camera permission.");
+        setIsScanning(false);
+      });
+  };
+
+  const stopWebcam = () => {
+    if (webcamRef.current && webcamRef.current.srcObject) {
+      webcamRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      webcamRef.current.srcObject = null;
+    }
+  };
+
+  useEffect(() => {
+    if (isScanning) {
+      startWebcam();
+    } else {
+      stopWebcam();
+    }
+    return () => stopWebcam();
+  }, [isScanning]);
 
   const signOut = async () => {
     try {
@@ -312,16 +451,43 @@ const EmployeeAttendance = () => {
 
   return (
     <section className="apply-leave-wrap">
+      {isScanning && (
+        <div className="webcam-modal-backdrop">
+          <div className="webcam-modal-content">
+            <h3>{user?.face_descriptor ? "Face Sign-In" : "First-Time Face Enrollment"}</h3>
+            <div className="webcam-container">
+              <video ref={webcamRef} autoPlay muted playsInline />
+              <div className="webcam-overlay"></div>
+            </div>
+            {faceError && <div className="dep-alert error small">{faceError}</div>}
+            <div className="designations-actions">
+              <button className="btn" onClick={() => setIsScanning(false)} disabled={saving}>
+                Cancel
+              </button>
+              {!user?.face_descriptor ? (
+                <button className="btn primary" onClick={handleEnrollFace} disabled={saving || !modelsLoaded}>
+                  <UserCheck size={16} /> {saving ? "Enrolling..." : "Enroll My Face"}
+                </button>
+              ) : (
+                <button className="btn primary" onClick={signIn} disabled={saving || !modelsLoaded || todayState.signedIn}>
+                  <Camera size={16} /> {saving ? "Scanning..." : "Scan Face to Sign In"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="designations-toolbar">
         <h2>Attendance</h2>
         <div className="designations-actions">
           {!todayState.signedIn ? (
             <button
               className="btn primary"
-              onClick={signIn}
-              disabled={saving || loading || onLeaveToday}
+              onClick={() => setIsScanning(true)}
+              disabled={saving || loading || onLeaveToday || !modelsLoaded}
             >
-              {saving ? "Signing in..." : "Sign In"}
+              {loading ? "Loading..." : !modelsLoaded ? "Loading AI..." : "Sign In"}
             </button>
           ) : (
             <button
