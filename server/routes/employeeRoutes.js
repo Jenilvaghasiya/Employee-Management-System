@@ -8,7 +8,7 @@ router.get("/public", employeeController.listPublicHeads);
 
 // Employee self profile (place BEFORE parameterized ':id' routes)
 router.put("/me", verifyToken, employeeController.updateSelf);
-
+router.post("/my/enroll-face", verifyToken, employeeController.enrollFace);
 // Admin protected routes
 router.post("/", verifyToken, isAdmin, employeeController.createEmployee);
 router.get("/", verifyToken, isAdmin, employeeController.getAllEmployees);

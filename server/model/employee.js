@@ -18,6 +18,10 @@ const Employee = sequelize.define(
       allowNull: false,
       defaultValue: "employee",
     },
+    face_descriptor: {
+      type: DataTypes.TEXT, // TEXT કારણ કે descriptor array મોટો હોઈ શકે છે
+      allowNull: true, // શરૂઆતમાં ખાલી હોઈ શકે છે
+    },
     status: { type: DataTypes.BOOLEAN, defaultValue: true },
   },
   {

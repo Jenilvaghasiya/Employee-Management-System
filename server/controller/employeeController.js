@@ -85,7 +85,39 @@ const employeeController = {
       res.status(500).json({ status: false, message: err.message });
     }
   },
+  enrollFace: async (req, res) => {
+    try {
+      const userId = req.user?.id; // આ verifyToken માંથી મળશે
+      const { descriptor } = req.body; // આ React માંથી આવશે
 
+      if (!userId) {
+        return res.status(401).json({ status: false, message: "Unauthorized" });
+      }
+      if (!descriptor) {
+        return res.status(400).json({ status: false, message: "Face descriptor is required" });
+      }
+
+      const employee = await Employee.findByPk(userId);
+      if (!employee) {
+        return res.status(404).json({ status: false, message: "Employee not found" });
+      }
+
+      // Descriptor એક array હોય છે, તેને JSON string તરીકે સેવ કરો
+      await employee.update({
+        face_descriptor: JSON.stringify(descriptor),
+      });
+
+      // Return a safe subset for the client cache
+      const updated = await Employee.findByPk(userId, {
+        attributes: ['id', 'name', 'email', 'role', 'face_descriptor']
+      });
+
+      res.status(200).json({ status: true, message: "Face enrolled successfully", data: updated });
+    } catch (err) {
+      console.error("Error enrolling face:", err);
+      res.status(500).json({ status: false, message: err.message });
+    }
+  },
   getAllEmployees: async (req, res) => {
     try {
       const employees = await Employee.findAll({
