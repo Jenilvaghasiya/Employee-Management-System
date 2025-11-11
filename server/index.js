@@ -10,12 +10,16 @@ const attendanceRoutes = require("./routes/attendanceRoutes");
 const leavePolicyRoutes = require("./routes/leavePolicyRoutes");
 const leaveRequestRoutes = require("./routes/leaveRequestRoutes");
 const authRoutes = require("./routes/authRoutes");
+const path = require('path');
 
 dotenv.config();
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Serve uploaded images statically
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 app.use('/api/departments',departmentRoutes);
 app.use('/api/designations',designationRoutes);
