@@ -24,7 +24,7 @@ const authController = {
         name,
         email,
         password: hashedPassword,
-        role: role || "Employee",
+        role: role || "employee",
         department_id,
         designation_id,
         reporting_head_id,
@@ -71,7 +71,6 @@ const authController = {
           name: user.name,
           email: user.email,
           role: user.role,
-          face_descriptor: user.face_descriptor,
         },
       });
     } catch (err) {

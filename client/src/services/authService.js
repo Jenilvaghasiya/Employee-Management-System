@@ -3,6 +3,12 @@ import api from './api';
 export const authService = {
   // Register new user
   register: async (userData) => {
+    if (typeof FormData !== 'undefined' && userData instanceof FormData) {
+      const response = await api.post('/auth/register', userData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    }
     const response = await api.post('/auth/register', userData);
     return response.data;
   },

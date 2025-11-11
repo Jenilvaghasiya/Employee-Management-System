@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controller/authController");
+const upload = require("../middleware/upload");
 
 // Public
-router.post("/register", authController.register);
+router.post("/register", upload.single("image"), authController.register);
 router.post("/login", authController.login);
 
 // Protected Example
