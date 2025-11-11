@@ -18,9 +18,9 @@ const Employee = sequelize.define(
       allowNull: false,
       defaultValue: "employee",
     },
-    face_descriptor: {
-      type: DataTypes.TEXT, // TEXT કારણ કે descriptor array મોટો હોઈ શકે છે
-      allowNull: true, // શરૂઆતમાં ખાલી હોઈ શકે છે
+    face_image_path: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     status: { type: DataTypes.BOOLEAN, defaultValue: true },
   },
@@ -30,6 +30,7 @@ const Employee = sequelize.define(
   }
 );
 
+// Define Relations with Aliases
 // ✅ Define Relations with Aliases
 Department.hasMany(Employee, { foreignKey: "department_id", as: "employees" });
 Employee.belongsTo(Department, {

@@ -7,8 +7,9 @@ const { verifyToken, isAdmin } = require("../controller/authController");
 router.get("/public", employeeController.listPublicHeads);
 
 // Employee self profile (place BEFORE parameterized ':id' routes)
+router.get("/me", verifyToken, employeeController.getMe);
+router.post("/my/face-enroll", verifyToken, require("../middleware/upload").single('image'), employeeController.faceEnroll);
 router.put("/me", verifyToken, employeeController.updateSelf);
-router.post("/my/enroll-face", verifyToken, employeeController.enrollFace);
 // Admin protected routes
 router.post("/", verifyToken, isAdmin, employeeController.createEmployee);
 router.get("/", verifyToken, isAdmin, employeeController.getAllEmployees);

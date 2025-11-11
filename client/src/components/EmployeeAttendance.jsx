@@ -3,17 +3,7 @@ import { attendanceService } from "../services/attendanceService";
 import { useAuth } from "../context/AuthContext";
 import { Clock, Camera, UserCheck } from "lucide-react";
 import * as faceapi from "face-api.js";
-
-const loadFaceModels = async () => {
-  const MODEL_URL = "/models";
-  await Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-  ]);
-};
+import { employeeService } from "../services/employeeService";
 
 const EmployeeAttendance = () => {
   const { user, setUserFromServer } = useAuth();
@@ -26,14 +16,13 @@ const EmployeeAttendance = () => {
   const [onLeaveToday, setOnLeaveToday] = useState(false);
   const autoSignOutTimerRef = useRef(null);
   const checkIntervalRef = useRef(null);
-
-  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const webcamRef = useRef(null);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [enrollmentPath, setEnrollmentPath] = useState("");
   const [faceError, setFaceError] = useState("");
 
   const fetchAll = useCallback(async () => {
-    if (!modelsLoaded) return;
     try {
       setLoading(true);
       setError("");
@@ -49,7 +38,7 @@ const EmployeeAttendance = () => {
     } finally {
       setLoading(false);
     }
-  }, [modelsLoaded]);
+  }, []);
 
   const refreshTodayWithRetry = async () => {
     try {
@@ -69,10 +58,36 @@ const EmployeeAttendance = () => {
     }
   };
 
+  // Load face-api models
   useEffect(() => {
-    loadFaceModels()
-      .then(() => setModelsLoaded(true))
-      .catch(() => setError("Failed to load AI models. Please refresh."));
+    const load = async () => {
+      try {
+        const MODEL_URL = "/models";
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
+        setModelsLoaded(true);
+      } catch (err) {
+        setError("Failed to load AI models. Please refresh.");
+      }
+    };
+    load();
+  }, []);
+
+  // Fetch my profile to check enrollment image path
+  useEffect(() => {
+    const getMe = async () => {
+      try {
+        const me = await employeeService.getMe();
+        const p = me?.face_image_path || "";
+        setEnrollmentPath(p);
+      } catch (_) {
+        setEnrollmentPath("");
+      }
+    };
+    getMe();
   }, []);
 
   useEffect(() => {
@@ -212,43 +227,61 @@ const EmployeeAttendance = () => {
     });
   };
 
-  const getFaceDescriptor = async () => {
-    if (!webcamRef.current) throw new Error("Webcam not ready");
+  const captureCurrentFrameAsBlob = async () => {
     const video = webcamRef.current;
+    if (!video) throw new Error("Webcam not ready");
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+  };
+
+  const detectDescriptorFromVideo = async () => {
+    const video = webcamRef.current;
+    if (!video) throw new Error("Webcam not ready");
     const detection = await faceapi
       .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
       .withFaceLandmarks()
       .withFaceDescriptor();
-    if (!detection) {
-      setFaceError("No face detected. Please look at the camera.");
-      return null;
-    }
-    setFaceError("");
+    if (!detection) return null;
     return detection.descriptor;
   };
 
-  const handleEnrollFace = async () => {
-    setFaceError("");
-    if (!webcamRef.current) {
-      setError("Webcam not started. Click 'Sign In' first.");
-      return;
-    }
+  const detectDescriptorFromUrl = async (url) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = url;
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = () => rej(new Error("Failed to load enrollment image"));
+    });
+    const detection = await faceapi
+      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!detection) return null;
+    return detection.descriptor;
+  };
+
+  const ENROLLMENT_BASE = "http://localhost:3000"; // uploads served at /uploads
+
+  const handleEnroll = async () => {
     try {
       setSaving(true);
-      const descriptor = await getFaceDescriptor();
-      if (!descriptor) {
-        setSaving(false);
-        return;
-      }
-      const descriptorArray = Array.from(descriptor);
-      const updated = await attendanceService.enrollFace(descriptorArray);
-      if (updated) {
-        setUserFromServer(updated);
-      }
-      setSuccess("Face enrolled successfully! You can now sign in.");
+      setFaceError("");
+      const blob = await captureCurrentFrameAsBlob();
+      if (!blob) throw new Error("Failed to capture image");
+      const file = new File([blob], "enroll.jpg", { type: "image/jpeg" });
+      const res = await employeeService.faceEnroll(file);
+      const p = res?.face_image_path || "";
+      if (!p) throw new Error("Enrollment failed");
+      setEnrollmentPath(p);
+      setSuccess("Face enrolled successfully");
       setIsScanning(false);
     } catch (e) {
-      setFaceError(e?.response?.data?.message || "Failed to enroll face");
+      setFaceError(e?.response?.data?.message || e.message || "Enrollment failed");
     } finally {
       setSaving(false);
     }
@@ -256,39 +289,44 @@ const EmployeeAttendance = () => {
 
   const signIn = async () => {
     if (!modelsLoaded) {
-      setError("AI models are still loading. Please wait.");
-      return;
-    }
-    if (!user?.face_descriptor) {
-      setFaceError("You must enroll your face before signing in.");
-      setIsScanning(true);
+      setError("AI models not loaded yet. Please wait.");
       return;
     }
     setIsScanning(true);
     setSaving(true);
     setError("");
     setSuccess("");
-    setFaceError("");
     try {
-      const location = await getCurrentLocation();
-      const currentDescriptor = await getFaceDescriptor();
-      if (!currentDescriptor) {
+      // If not enrolled, block and ask to enroll
+      if (!enrollmentPath) {
+        setFaceError("Please enroll your face first");
         setSaving(false);
         return;
       }
-      const storedDescriptor = new Float32Array(
-        typeof user.face_descriptor === "string"
-          ? JSON.parse(user.face_descriptor)
-          : user.face_descriptor
-      );
-      const distance = faceapi.euclideanDistance(currentDescriptor, storedDescriptor);
-      const FACE_MATCH_THRESHOLD = 0.4;
-      if (distance > FACE_MATCH_THRESHOLD) {
-        setFaceError(`Face not recognized (Distance: ${distance.toFixed(2)}). Please try again.`);
+
+      // Compare live vs enrolled
+      const [liveDesc, baseDesc] = await Promise.all([
+        detectDescriptorFromVideo(),
+        detectDescriptorFromUrl(`${ENROLLMENT_BASE}${enrollmentPath}`),
+      ]);
+      if (!liveDesc || !baseDesc) {
+        setFaceError("Face not detected. Please look at the camera.");
         setSaving(false);
         return;
       }
-      const res = await attendanceService.signIn(location);
+      const distance = faceapi.euclideanDistance(liveDesc, baseDesc);
+      const THRESHOLD = 0.45;
+      if (distance > THRESHOLD) {
+        setFaceError(`Face does not match (d=${distance.toFixed(2)}).`);
+        setSaving(false);
+        return;
+      }
+
+      // On success, also send captured image for audit
+      const blob = await captureCurrentFrameAsBlob();
+      if (!blob) throw new Error("Failed to capture image");
+      const file = new File([blob], "attendance.jpg", { type: "image/jpeg" });
+      const res = await attendanceService.signIn({ image: file });
       const rec = res?.id ? res : null;
       if (rec) {
         setToday(rec);
@@ -454,26 +492,26 @@ const EmployeeAttendance = () => {
       {isScanning && (
         <div className="webcam-modal-backdrop">
           <div className="webcam-modal-content">
-            <h3>{user?.face_descriptor ? "Face Sign-In" : "First-Time Face Enrollment"}</h3>
+            <h3>{enrollmentPath ? "Scan Face to Sign In" : "Enroll Your Face"}</h3>
             <div className="webcam-container">
               <video ref={webcamRef} autoPlay muted playsInline />
               <div className="webcam-overlay"></div>
             </div>
-            {faceError && <div className="dep-alert error small">{faceError}</div>}
             <div className="designations-actions">
               <button className="btn" onClick={() => setIsScanning(false)} disabled={saving}>
                 Cancel
               </button>
-              {!user?.face_descriptor ? (
-                <button className="btn primary" onClick={handleEnrollFace} disabled={saving || !modelsLoaded}>
-                  <UserCheck size={16} /> {saving ? "Enrolling..." : "Enroll My Face"}
+              {enrollmentPath ? (
+                <button className="btn primary" onClick={signIn} disabled={saving || todayState.signedIn || !modelsLoaded}>
+                  <Camera size={16} /> {saving ? "Scanning..." : "Scan & Sign In"}
                 </button>
               ) : (
-                <button className="btn primary" onClick={signIn} disabled={saving || !modelsLoaded || todayState.signedIn}>
-                  <Camera size={16} /> {saving ? "Scanning..." : "Scan Face to Sign In"}
+                <button className="btn primary" onClick={handleEnroll} disabled={saving || !modelsLoaded}>
+                  <UserCheck size={16} /> {saving ? "Enrolling..." : "Enroll Face"}
                 </button>
               )}
             </div>
+            {faceError && <div className="dep-alert error small" style={{marginTop:8}}>{faceError}</div>}
           </div>
         </div>
       )}
