@@ -30,6 +30,10 @@ const Attendance = sequelize.define("Attendance", {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  face_imagepath: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   status: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,

@@ -2,12 +2,13 @@ const express = require("express");
 const router = express.Router();
 const attendanceController = require("../controller/attendanceController");
 const { verifyToken, isAdmin } = require("../controller/authController");
+const upload = require("../middleware/upload");
 
 // Employee endpoints (place BEFORE param routes)
 router.get("/my", verifyToken, attendanceController.getMyAttendance);
 router.get("/my/today", verifyToken, attendanceController.getMyToday);
 router.post("/mark", verifyToken, attendanceController.markToday);
-router.post("/sign-in", verifyToken, attendanceController.signInToday);
+router.post("/sign-in", verifyToken, upload.single('image'), attendanceController.signInToday);
 router.post("/sign-out", verifyToken, attendanceController.signOutToday);
 
 router.post("/", verifyToken, attendanceController.createAttendance);

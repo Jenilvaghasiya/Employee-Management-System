@@ -52,12 +52,9 @@ const attendanceController = {
       const userId = req.user?.id;
       if (!userId) return res.status(401).json({ status: false, message: 'Unauthorized' });
 
-      // Ensure the user has enrolled their face before allowing sign-in
+      // Optionally ensure employee exists
       const emp = await Employee.findByPk(userId);
       if (!emp) return res.status(404).json({ status: false, message: 'Employee not found' });
-      if (!emp.face_descriptor) {
-        return res.status(400).json({ status: false, message: 'Face not enrolled. Please enroll your face before signing in.' });
-      }
 
       const now = new Date();
       const yyyy = now.getFullYear();
@@ -89,6 +86,9 @@ const attendanceController = {
           sign_in_time: now,
           status: true,
         };
+        if (req.file?.filename) {
+          createPayload.face_imagepath = `/uploads/${req.file.filename}`;
+        }
         if (!isNaN(workEnd) && now >= workEnd) {
           createPayload.sign_out_time = workEnd;
         }
@@ -107,7 +107,11 @@ const attendanceController = {
         return res.status(200).json({ status: true, message: 'Already signed in', data: fresh });
       }
 
-      await record.update({ sign_in_time: now, status: true });
+      const updatePayload = { sign_in_time: now, status: true };
+      if (req.file?.filename) {
+        updatePayload.face_imagepath = `/uploads/${req.file.filename}`;
+      }
+      await record.update(updatePayload);
       // If signing in after 18:00, also set sign_out_time to 18:00
       const workEnd = new Date(`${todayStr}T18:00:00`);
       if (!record.sign_out_time && !isNaN(workEnd) && now >= workEnd) {
